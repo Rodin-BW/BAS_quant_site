@@ -61,6 +61,13 @@ def build():
         header_content
     )
 
+    # 4.4 헤더의 DB 배지: yfinance 실시간 연동으로 직관적 변경
+    header_content = re.sub(
+        r'<span class="font-label-sm text-label-sm text-on-surface-variant">Live 40Y DB Active</span>',
+        r'<span class="font-label-sm text-label-sm text-secondary font-bold font-mono">⚡ yfinance 실시간 연동 (Live On-Demand)</span>',
+        header_content
+    )
+
     # 5. DCA 주기 선택 버튼 2종 바인딩 (월간 vs 분기)
     dca_period_old = r'<div class="flex bg-surface-container-lowest rounded-md p-1">\s*<button class="flex-1 py-1 text-center font-label-sm text-label-sm rounded bg-surface-container-high text-primary font-bold" type="button">월간</button>\s*<button class="flex-1 py-1 text-center font-label-sm text-label-sm rounded text-outline hover:text-on-surface" type="button">분기</button>\s*</div>'
     dca_period_new = """<div class="flex bg-surface-container-lowest rounded-md p-1" id="dca-freq-group">
@@ -69,18 +76,19 @@ def build():
 </div>"""
     b_body = re.sub(dca_period_old, dca_period_new, b_body, flags=re.DOTALL)
     b_body = re.sub(r'연 총액 ₩1,200만', r'<span id="dca-annual-summary">연 총액 ₩1,200만</span>', b_body)
+    b_body = re.sub(r'시뮬레이션 검증 기간 \(40Y Extended DB\)', r'시뮬레이션 검증 기간 (yfinance 실시간 연동)', b_body)
 
-    # 6. 시뮬레이션 기간 설정 (오늘 날짜까지 최신 날짜 제한 해제 & 정밀 날짜 피커)
+    # 6. 시뮬레이션 기간 설정 (오늘 날짜까지 최신 날짜 제한 완전 해제 & 정밀 날짜 피커)
     period_block_old = r'<div class="grid grid-cols-2 gap-space-sm">\s*<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg">\s*<span class="material-symbols-outlined text-outline text-\[16px\]">calendar_today</span>\s*<input [^>]*value="2010-01-01"[^>]*/>\s*</div>\s*<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg">\s*<span class="material-symbols-outlined text-outline text-\[16px\]">event</span>\s*<input [^>]*value="2024-04-30"[^>]*/>\s*</div>\s*</div>\s*<div class="flex justify-between items-center px-1">\s*<span class="font-label-sm text-\[11px\] text-outline">.*?</span>\s*<div class="flex gap-1">\s*<button[^>]*>5Y</button>\s*<button[^>]*>10Y</button>\s*<button[^>]*>MAX \(40Y\)</button>\s*</div>\s*</div>'
     today_str = datetime.date.today().strftime('%Y-%m-%d')
     period_block_new = f"""<div class="grid grid-cols-2 gap-space-sm">
   <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg focus-within:ring-1 focus-within:ring-primary">
     <span class="material-symbols-outlined text-primary text-[16px]">calendar_today</span>
-    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-start-date" value="2010-01-01" min="1984-05-01" max="{today_str}" onchange="handleDateChange()" oninput="handleDateChange()"/>
+    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-start-date" value="2010-01-01" min="1980-01-01" onchange="handleDateChange()" oninput="handleDateChange()"/>
   </div>
   <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg focus-within:ring-1 focus-within:ring-primary">
     <span class="material-symbols-outlined text-primary text-[16px]">event</span>
-    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-end-date" value="{today_str}" min="1984-05-01" max="{today_str}" onchange="handleDateChange()" oninput="handleDateChange()"/>
+    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-end-date" value="{today_str}" min="1980-01-01" onchange="handleDateChange()" oninput="handleDateChange()"/>
   </div>
 </div>
 <div class="flex justify-between items-center px-1">
@@ -88,7 +96,7 @@ def build():
   <div class="flex gap-1" id="period-btn-group">
     <button id="period-btn-5y" onclick="setPeriodRange('5Y')" class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant hover:text-primary font-label-sm text-[10px] transition-all" type="button">5Y</button>
     <button id="period-btn-10y" onclick="setPeriodRange('10Y')" class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant hover:text-primary font-label-sm text-[10px] transition-all" type="button">10Y</button>
-    <button id="period-btn-max" onclick="setPeriodRange('MAX')" class="px-2 py-0.5 rounded bg-surface-container-highest text-primary font-label-sm text-[10px] font-bold transition-all shadow-sm" type="button">MAX (40Y)</button>
+    <button id="period-btn-max" onclick="setPeriodRange('MAX')" class="px-2 py-0.5 rounded bg-surface-container-highest text-primary font-label-sm text-[10px] font-bold transition-all shadow-sm" type="button">MAX</button>
   </div>
 </div>"""
     b_body = re.sub(period_block_old, period_block_new, b_body, flags=re.DOTALL)
@@ -458,6 +466,30 @@ def build():
         r'<button class="text-primary hover:text-primary/80 font-label-sm text-label-sm flex items-center gap-1" type="button">\s*<span>전체 로그</span>\s*<span class="material-symbols-outlined text-\[14px\]">arrow_forward</span>\s*</button>',
         r'<button class="text-primary hover:text-primary/80 font-label-sm text-label-sm flex items-center gap-1 cursor-pointer" onclick="downloadAllRebalanceLogs()" type="button"><span>전체 로그</span><span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>',
         r_body
+    )
+
+    # 15.5 리포트 내 2024년 정적 흔적을 동적 엘리먼트로 전면 교체
+    r_body = re.sub(
+        r'<span>기간: <strong class="text-on-surface font-table-numeric">2010\.01\.01 ~ 2024\.04\.30</strong> \(14년 4개월\)</span>',
+        f'<span>기간: <strong id="report-period-text" class="text-on-surface font-table-numeric">2010.01.01 ~ {today_str}</strong> (16년 9개월)</span>',
+        r_body
+    )
+    r_body = re.sub(
+        r'<span class="text-primary font-bold">2024\.04</span>',
+        f'<span id="chart-end-label" class="text-primary font-bold">{today_str[:7].replace("-", ".")}</span>',
+        r_body
+    )
+    r_body = re.sub(
+        r'<tbody class="font-mono text-table-numeric divide-y-0">',
+        r'<tbody id="monthly-returns-tbody" class="font-mono text-table-numeric divide-y-0">',
+        r_body,
+        count=1
+    )
+    r_body = re.sub(
+        r'<tbody class="font-table-numeric text-table-numeric divide-y-0">',
+        r'<tbody id="rebalance-log-tbody" class="font-table-numeric text-table-numeric divide-y-0">',
+        r_body,
+        count=1
     )
 
     # 16. 커스텀 스크립트 작성 (완전한 상호작용 및 yfinance 실시간 연동, 배당수익률 산출, 1/N 배분 완비)
@@ -887,10 +919,14 @@ def build():
     const todayStr = getTodayString();
     const startInput = document.getElementById('sim-start-date');
     const endInput = document.getElementById('sim-end-date');
-    if (startInput) startInput.max = todayStr;
+    if (startInput) {
+      startInput.removeAttribute('max');
+    }
     if (endInput) {
-      endInput.max = todayStr;
-      endInput.value = todayStr;
+      endInput.removeAttribute('max');
+      if (!endInput.value) {
+        endInput.value = todayStr;
+      }
     }
     handleDateChange();
   }
@@ -1374,6 +1410,61 @@ def build():
         kpi8Badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">receipt_long</span> 22% 완제 (연 250만 공제)`;
       } else {
         kpi8Badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">savings</span> 비과세/ISA 혜택 (양도세 0원)`;
+      }
+    }
+
+    // 차트 끝 날짜 라벨 동적 갱신
+    const chartEndEl = document.getElementById('chart-end-label');
+    if (chartEndEl) {
+      chartEndEl.textContent = endDateStr.substring(0, 7).replace(/-/g, '.');
+    }
+
+    // 월간 수익률 매트릭스 동적 렌더링 (최신 연도 상단)
+    if (data.monthlyReturns && data.monthlyReturns.length > 0) {
+      const tbody = document.getElementById('monthly-returns-tbody');
+      if (tbody) {
+        tbody.innerHTML = data.monthlyReturns.map(row => {
+          let cols = `<td class="py-2 px-1 text-left font-bold text-on-surface">${row.year}</td>`;
+          for (let m = 1; m <= 12; m++) {
+            const val = row.months[String(m)];
+            if (val === null || val === undefined) {
+              cols += `<td class="py-2 px-1 text-outline-variant">-</td>`;
+            } else {
+              const isPos = val >= 0;
+              const bgClass = isPos ? 'bg-secondary-container/20 text-secondary' : 'bg-tertiary-container/20 text-tertiary';
+              cols += `<td class="py-2 px-1"><span class="block py-1 rounded ${bgClass}">${isPos ? '+' : ''}${val.toFixed(1)}</span></td>`;
+            }
+          }
+          const tot = row.total;
+          const totClass = tot >= 0 ? 'text-secondary' : 'text-tertiary';
+          cols += `<td class="py-2 px-1 text-right font-bold ${totClass}">${tot >= 0 ? '+' : ''}${tot.toFixed(1)}%</td>`;
+          return `<tr class="hover:bg-surface-container-high/60 transition-colors">${cols}</tr>`;
+        }).join('');
+      }
+    }
+
+    // 최근 리밸런싱 실행 로그 동적 렌더링
+    if (data.recentRebalances && data.recentRebalances.length > 0) {
+      const rebTbody = document.getElementById('rebalance-log-tbody');
+      if (rebTbody) {
+        rebTbody.innerHTML = data.recentRebalances.map(r => {
+          const retClass = r.return >= 0 ? 'text-secondary' : 'text-tertiary';
+          return `
+            <tr class="hover:bg-surface-container-high/60 transition-colors">
+              <td class="py-2.5 px-1 font-mono">
+                <span class="font-bold text-on-surface">${r.date}</span>
+                <span class="block text-[11px] text-outline font-sans">${r.type}</span>
+              </td>
+              <td class="py-2.5 px-1 text-center font-mono">
+                <span class="text-[11px] text-primary">${r.alloc}</span>
+              </td>
+              <td class="py-2.5 px-1 text-center">
+                <span class="inline-flex px-1.5 py-0.5 rounded bg-surface-container-highest text-outline font-label-sm text-[11px]">${r.action}</span>
+              </td>
+              <td class="py-2.5 px-1 text-right font-mono font-bold ${retClass}">${r.return >= 0 ? '+' : ''}${r.return.toFixed(2)}%</td>
+            </tr>
+          `;
+        }).join('');
       }
     }
   }
