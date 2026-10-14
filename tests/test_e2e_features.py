@@ -92,12 +92,37 @@ def test_e2e_features():
         assert first_row_year == "2026", f"Monthly returns matrix top year should be 2026: {first_row_year}"
         assert first_reb_date.startswith("2026"), f"Rebalance log should show 2026: {first_reb_date}"
         
-        screenshot_path = os.path.join(artifact_dir, "recent_date_yfinance_verified.png")
-        page.screenshot(path=screenshot_path, full_page=True)
-        print(f"Verified screenshot saved to {screenshot_path}", flush=True)
+        # 5. 차트 인터랙티브 호버 검증 (마우스 놓았을 때 액션 표시)
+        print("6. Verifying interactive chart hover action...", flush=True)
+        chart_area = target_frame.locator("#chart-hover-area")
+        tooltip = target_frame.locator("#chart-interactive-tooltip")
+        
+        # 호버 전에는 opacity-0 클래스 확인
+        assert "opacity-0" in tooltip.get_attribute("class"), "Tooltip should be hidden before hover"
+        
+        # 차트 70% 위치 (2022년 금리인상 방어 구간)로 마우스 이동
+        chart_box = chart_area.bounding_box()
+        hover_x = chart_box["x"] + chart_box["width"] * 0.72
+        hover_y = chart_box["y"] + chart_box["height"] * 0.45
+        page.mouse.move(hover_x, hover_y)
+        time.sleep(1)
+        
+        # 호버 후 툴팁 활성화 검증
+        tooltip_classes = tooltip.get_attribute("class")
+        assert "opacity-0" not in tooltip_classes, f"Tooltip should be visible on hover: {tooltip_classes}"
+        hover_date = target_frame.locator("#tooltip-date-header").text_content().strip()
+        hover_event = target_frame.locator("#tooltip-event-title").text_content().strip()
+        hover_bas = target_frame.locator("#tooltip-bas-val").text_content().strip()
+        print(f"Chart Hover Active -> Date: {hover_date}, Event: {hover_event}, Return: {hover_bas}", flush=True)
+        assert hover_date != "" and hover_bas != "", "Tooltip contents should be populated on hover"
+        
+        # 호버 상태 스크린샷 캡처
+        hover_screenshot_path = os.path.join(artifact_dir, "chart_hover_action_verified.png")
+        page.screenshot(path=hover_screenshot_path, full_page=True)
+        print(f"Hover action screenshot saved to {hover_screenshot_path}", flush=True)
         
         browser.close()
-        print("All Recent Date & yfinance Verification Passed Successfully!", flush=True)
+        print("All Recent Date, yfinance & Interactive Chart Hover Verification Passed Successfully!", flush=True)
 
 if __name__ == "__main__":
     test_e2e_features()
