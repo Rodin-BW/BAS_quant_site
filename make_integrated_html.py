@@ -1910,56 +1910,67 @@ def build():
     const curMonth = String(eDateFull.getMonth() + 1).padStart(2, '0');
     const endLabelStr = `${curYear}.${curMonth}`;
 
-    let tfYears = (eDateFull.getTime() - sDateFull.getTime()) / (365.25 * 24 * 3600 * 1000);
-    let labels = [];
+    const rawCurve = state.lastResult && Array.isArray(state.lastResult.curveData) && state.lastResult.curveData.length > 5
+      ? state.lastResult.curveData
+      : null;
 
-    if (tf === '10Y') {
-      tfYears = Math.min(10, tfYears);
-      const y0 = curYear - 10;
-      labels = [`${y0}`, `${y0+2}`, `${y0+4}`, `${y0+6}`, `${y0+8}`, endLabelStr];
-    } else if (tf === '5Y') {
-      tfYears = Math.min(5, tfYears);
-      const y0 = curYear - 5;
-      labels = [`${y0}`, `${y0+1}`, `${y0+2}`, `${y0+3}`, `${y0+4}`, endLabelStr];
-    } else if (tf === '3Y') {
-      tfYears = Math.min(3, tfYears);
-      const y0 = curYear - 3;
-      labels = [`${y0}.${curMonth}`, `${y0+1}.01`, `${y0+1}.07`, `${y0+2}.01`, `${y0+2}.07`, endLabelStr];
-    } else if (tf === '1Y') {
-      tfYears = Math.min(1, tfYears);
-      labels = [`${curYear-1}.${curMonth}`, `${curYear}.01`, `${curYear}.04`, `${curYear}.07`, endLabelStr];
-    } else if (tf === 'YTD') {
-      tfYears = Math.max(0.5, (eDateFull.getMonth() + 1) / 12);
-      labels = [`${curYear}.01`, `${curYear}.03`, `${curYear}.05`, `${curYear}.07`, `${curYear}.09`, endLabelStr];
-    } else {
-      // ALL
-      const yStart = sDateFull.getFullYear();
-      const span = curYear - yStart;
-      const step = Math.max(2, Math.round(span / 6));
-      labels = [];
-      for (let y = yStart; y < curYear; y += step) {
-        labels.push(`${y}`);
+    let ptsToRender = [];
+    if (rawCurve) {
+      let cutoffTime = 0;
+      if (tf === '10Y') cutoffTime = new Date(curYear - 10, eDateFull.getMonth(), eDateFull.getDate()).getTime();
+      else if (tf === '5Y') cutoffTime = new Date(curYear - 5, eDateFull.getMonth(), eDateFull.getDate()).getTime();
+      else if (tf === '3Y') cutoffTime = new Date(curYear - 3, eDateFull.getMonth(), eDateFull.getDate()).getTime();
+      else if (tf === '1Y') cutoffTime = new Date(curYear - 1, eDateFull.getMonth(), eDateFull.getDate()).getTime();
+      else if (tf === 'YTD') cutoffTime = new Date(curYear, 0, 1).getTime();
+
+      ptsToRender = rawCurve.filter(p => p.timestamp >= cutoffTime);
+      if (ptsToRender.length < 5) ptsToRender = rawCurve;
+    }
+
+    // X축 라벨 동적 갱신
+    if (xLabels) {
+      if (ptsToRender.length > 0) {
+        const step = Math.max(1, Math.floor(ptsToRender.length / 5));
+        const samplePts = [];
+        for (let idx = 0; idx < ptsToRender.length; idx += step) {
+          samplePts.push(ptsToRender[idx]);
+        }
+        if (samplePts[samplePts.length - 1] !== ptsToRender[ptsToRender.length - 1]) {
+          samplePts.push(ptsToRender[ptsToRender.length - 1]);
+        }
+        xLabels.innerHTML = samplePts.map((pt, idx) => {
+          const isEnd = (idx === samplePts.length - 1);
+          const isStart = (idx === 0);
+          const idAttr = isEnd ? ' id="chart-end-label"' : '';
+          const cls = isEnd ? 'text-primary font-bold' : (isStart ? 'text-on-surface-variant font-semibold' : 'text-outline');
+          const shortDate = pt.date.substring(0, 7).replace('-', '.');
+          return `<span${idAttr} class="${cls}">${shortDate}</span>`;
+        }).join('');
+      } else {
+        let tfYears = (eDateFull.getTime() - sDateFull.getTime()) / (365.25 * 24 * 3600 * 1000);
+        let labels = [];
+        if (tf === '10Y') {
+          const y0 = curYear - 10;
+          labels = [`${y0}`, `${y0+2}`, `${y0+4}`, `${y0+6}`, `${y0+8}`, endLabelStr];
+        } else if (tf === '5Y') {
+          const y0 = curYear - 5;
+          labels = [`${y0}`, `${y0+1}`, `${y0+2}`, `${y0+3}`, `${y0+4}`, endLabelStr];
+        } else {
+          const yStart = sDateFull.getFullYear();
+          const span = curYear - yStart;
+          const step = Math.max(2, Math.round(span / 6));
+          labels = [];
+          for (let y = yStart; y < curYear; y += step) labels.push(`${y}`);
+          labels.push(endLabelStr);
+        }
+        xLabels.innerHTML = labels.map((lb, idx) => {
+          const isEnd = (idx === labels.length - 1);
+          const cls = isEnd ? 'text-primary font-bold' : 'text-outline';
+          return `<span class="${cls}">${lb}</span>`;
+        }).join('');
       }
-      labels.push(endLabelStr);
     }
 
-    if (xLabels && labels.length > 0) {
-      xLabels.innerHTML = labels.map((lb, idx) => {
-        const isEnd = (idx === labels.length - 1);
-        const isStart = (idx === 0);
-        const idAttr = isEnd ? ' id="chart-end-label"' : '';
-        const cls = isEnd ? 'text-primary font-bold' : (isStart ? 'text-on-surface-variant font-semibold' : 'text-outline');
-        return `<span${idAttr} class="${cls}">${lb}</span>`;
-      }).join('');
-    }
-
-    const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 18.42;
-    const mddVal = state.lastResult ? state.lastResult.mdd : -18.25;
-    const benchCagr = cagr * 0.65;
-    const kospiCagr = cagr * 0.35;
-    const rfCagr = 5.0;
-
-    const numSteps = 50;
     const basPoints = [];
     const spyPoints = [];
     const kospiPoints = [];
@@ -1967,62 +1978,115 @@ def build():
     const mddPoints = [];
     const benchMddPoints = [];
 
-    const totalGrowth = Math.pow(1 + cagr / 100, tfYears);
-    const maxLin = Math.max(1.5, totalGrowth * 1.08);
-    const maxLog = Math.log(Math.max(1.8, totalGrowth * 1.15));
+    if (ptsToRender.length > 5) {
+      state.activeRenderedPoints = ptsToRender;
+      const p0Wealth = ptsToRender[0].wealth || 1;
+      const s0Ret = ptsToRender[0].benchReturnPct || 0;
 
-    for (let i = 0; i <= numSteps; i++) {
-      const ratio = i / numSteps;
-      const x = Math.round(ratio * 1000);
-      const t = ratio * tfYears;
+      const basNorm = ptsToRender.map(p => Math.max(0.01, p.wealth / p0Wealth));
+      const spyNorm = ptsToRender.map(p => Math.max(0.01, 1.0 + (p.benchReturnPct - s0Ret) / 100.0));
+      const maxVal = Math.max(...basNorm, ...spyNorm, 1.15) * 1.05;
+      const minVal = Math.min(0.85, Math.min(...basNorm, ...spyNorm) * 0.95);
+      const logMax = Math.log(Math.max(1.1, maxVal));
+      const logMin = Math.log(Math.max(0.1, minVal));
+      const logSpan = Math.max(0.1, logMax - logMin);
 
-      let vBas = Math.pow(1 + cagr / 100, t);
-      let vSpy = Math.pow(1 + benchCagr / 100, t);
-      let vKospi = Math.pow(1 + kospiCagr / 100, t);
-      let vRf = Math.pow(1 + rfCagr / 100, t);
+      const n = ptsToRender.length;
+      for (let i = 0; i < n; i++) {
+        const x = Math.round((i / (n - 1)) * 1000);
+        const vBas = basNorm[i];
+        const vSpy = spyNorm[i];
+        const vKospi = Math.max(0.2, 1.0 + (vSpy - 1.0) * 0.45);
+        const vRf = 1.0 + (i / (n - 1)) * 0.05 * (n / 252);
 
-      let dip = 0;
-      if (tf === 'ALL' || tf === '10Y' || tf === '5Y') {
-        const dist = Math.abs(ratio - 0.72);
-        if (dist < 0.12) {
-          dip = (1 - dist / 0.12) * (Math.abs(mddVal) / 100);
+        let yBas, ySpy, yKospi, yRf;
+        if (scale === 'log') {
+          yBas = 260 - ((Math.log(Math.max(0.1, vBas)) - logMin) / logSpan) * 225;
+          ySpy = 260 - ((Math.log(Math.max(0.1, vSpy)) - logMin) / logSpan) * 225;
+          yKospi = 260 - ((Math.log(Math.max(0.1, vKospi)) - logMin) / logSpan) * 225;
+          yRf = 260 - ((Math.log(Math.max(0.1, vRf)) - logMin) / logSpan) * 225;
+        } else {
+          yBas = 260 - ((vBas - minVal) / (maxVal - minVal)) * 225;
+          ySpy = 260 - ((vSpy - minVal) / (maxVal - minVal)) * 225;
+          yKospi = 260 - ((vKospi - minVal) / (maxVal - minVal)) * 225;
+          yRf = 260 - ((vRf - minVal) / (maxVal - minVal)) * 225;
         }
-      } else if (tf === '3Y' || tf === '1Y') {
-        const dist = Math.abs(ratio - 0.45);
-        if (dist < 0.15) {
-          dip = (1 - dist / 0.15) * 0.08;
+
+        yBas = Math.max(25, Math.min(270, yBas));
+        ySpy = Math.max(30, Math.min(270, ySpy));
+        yKospi = Math.max(40, Math.min(270, yKospi));
+        yRf = Math.max(50, Math.min(270, yRf));
+
+        basPoints.push({ x, y: yBas });
+        spyPoints.push({ x, y: ySpy });
+        kospiPoints.push({ x, y: yKospi });
+        rfPoints.push({ x, y: yRf });
+
+        const pMDD = Math.max(-80, Math.min(0, ptsToRender[i].mddPct || 0));
+        const sMDD = Math.max(-80, Math.min(0, ptsToRender[i].benchMddPct || 0));
+        mddPoints.push({ x, y: 10 + Math.abs(pMDD) * 1.3 });
+        benchMddPoints.push({ x, y: 10 + Math.abs(sMDD) * 1.3 });
+      }
+      state.activeBasPoints = basPoints;
+    } else {
+      const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 18.42;
+      const mddVal = state.lastResult ? state.lastResult.mdd : -18.25;
+      const benchCagr = cagr * 0.65;
+      const kospiCagr = cagr * 0.35;
+      const rfCagr = 5.0;
+      let tfYears = (eDateFull.getTime() - sDateFull.getTime()) / (365.25 * 24 * 3600 * 1000);
+      const totalGrowth = Math.pow(1 + cagr / 100, tfYears);
+      const maxLin = Math.max(1.5, totalGrowth * 1.08);
+      const maxLog = Math.log(Math.max(1.8, totalGrowth * 1.15));
+
+      const numSteps = 50;
+      for (let i = 0; i <= numSteps; i++) {
+        const ratio = i / numSteps;
+        const x = Math.round(ratio * 1000);
+        const t = ratio * tfYears;
+
+        let vBas = Math.pow(1 + cagr / 100, t);
+        let vSpy = Math.pow(1 + benchCagr / 100, t);
+        let vKospi = Math.pow(1 + kospiCagr / 100, t);
+        let vRf = Math.pow(1 + rfCagr / 100, t);
+
+        let dip = 0;
+        if (tf === 'ALL' || tf === '10Y' || tf === '5Y') {
+          const dist = Math.abs(ratio - 0.72);
+          if (dist < 0.12) dip = (1 - dist / 0.12) * (Math.abs(mddVal) / 100);
         }
+        vBas *= (1 - dip * 0.7);
+        vSpy *= (1 - dip * 1.2);
+
+        let yBas, ySpy, yKospi, yRf;
+        if (scale === 'log') {
+          yBas = 260 - (Math.log(Math.max(1, vBas)) / maxLog) * 225;
+          ySpy = 260 - (Math.log(Math.max(1, vSpy)) / maxLog) * 225;
+          yKospi = 260 - (Math.log(Math.max(1, vKospi)) / maxLog) * 225;
+          yRf = 260 - (Math.log(Math.max(1, vRf)) / maxLog) * 225;
+        } else {
+          yBas = 260 - ((vBas - 1) / (maxLin - 1)) * 225;
+          ySpy = 260 - ((vSpy - 1) / (maxLin - 1)) * 225;
+          yKospi = 260 - ((vKospi - 1) / (maxLin - 1)) * 225;
+          yRf = 260 - ((vRf - 1) / (maxLin - 1)) * 225;
+        }
+
+        yBas = Math.max(25, Math.min(270, yBas));
+        ySpy = Math.max(30, Math.min(270, ySpy));
+        yKospi = Math.max(40, Math.min(270, yKospi));
+        yRf = Math.max(50, Math.min(270, yRf));
+
+        basPoints.push({ x, y: yBas });
+        spyPoints.push({ x, y: ySpy });
+        kospiPoints.push({ x, y: yKospi });
+        rfPoints.push({ x, y: yRf });
+
+        const mddY = 10 + Math.min(85, dip * 200);
+        const benchMddY = 10 + Math.min(95, dip * 320);
+        mddPoints.push({ x, y: mddY });
+        benchMddPoints.push({ x, y: benchMddY });
       }
-      vBas *= (1 - dip * 0.7);
-      vSpy *= (1 - dip * 1.2);
-
-      let yBas, ySpy, yKospi, yRf;
-      if (scale === 'log') {
-        yBas = 260 - (Math.log(Math.max(1, vBas)) / maxLog) * 225;
-        ySpy = 260 - (Math.log(Math.max(1, vSpy)) / maxLog) * 225;
-        yKospi = 260 - (Math.log(Math.max(1, vKospi)) / maxLog) * 225;
-        yRf = 260 - (Math.log(Math.max(1, vRf)) / maxLog) * 225;
-      } else {
-        yBas = 260 - ((vBas - 1) / (maxLin - 1)) * 225;
-        ySpy = 260 - ((vSpy - 1) / (maxLin - 1)) * 225;
-        yKospi = 260 - ((vKospi - 1) / (maxLin - 1)) * 225;
-        yRf = 260 - ((vRf - 1) / (maxLin - 1)) * 225;
-      }
-
-      yBas = Math.max(25, Math.min(270, yBas));
-      ySpy = Math.max(30, Math.min(270, ySpy));
-      yKospi = Math.max(40, Math.min(270, yKospi));
-      yRf = Math.max(50, Math.min(270, yRf));
-
-      basPoints.push({ x, y: yBas });
-      spyPoints.push({ x, y: ySpy });
-      kospiPoints.push({ x, y: yKospi });
-      rfPoints.push({ x, y: yRf });
-
-      const mddY = 10 + Math.min(85, dip * 200);
-      const benchMddY = 10 + Math.min(95, dip * 320);
-      mddPoints.push({ x, y: mddY });
-      benchMddPoints.push({ x, y: benchMddY });
+      state.activeBasPoints = basPoints;
     }
 
     const makePathD = (pts) => pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
@@ -2048,11 +2112,12 @@ def build():
       midDot1.setAttribute('cy', pt1.y);
     }
     if (midDot2 && basPoints.length > 25) {
-      const pt2 = basPoints[Math.round(basPoints.length * 0.72)];
+      const pt2 = basPoints[Math.round(basPoints.length * 0.5)];
       midDot2.setAttribute('cx', pt2.x);
       midDot2.setAttribute('cy', pt2.y);
     }
   }
+
 
   // --- 전체 리밸런싱 히스토리 생성 및 모달 엔진 ---
   function generateFullRebalanceHistory(sDate, eDate) {
@@ -2418,37 +2483,56 @@ def build():
     const ratioX = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const svgX = ratioX * 1000;
 
-    // Y 좌표 베지어 곡선 근사 계산
+    let dateStr = "";
+    let curReturn = 0;
+    let benchReturn = 0;
+    let yStr = 2024;
+    let curDate = new Date();
     let svgY = 260 - (ratioX * 225);
-    if (ratioX > 0.65 && ratioX < 0.85) {
-      const dipRatio = (ratioX - 0.75) / 0.1;
-      svgY += Math.max(0, (1 - dipRatio * dipRatio) * 35);
+
+    const rendered = state.activeRenderedPoints;
+    const basPts = state.activeBasPoints;
+    if (rendered && rendered.length > 5) {
+      const idx = Math.min(rendered.length - 1, Math.round(ratioX * (rendered.length - 1)));
+      const pt = rendered[idx];
+      dateStr = pt.date.replace(/-/g, '.');
+      curReturn = pt.returnPct;
+      benchReturn = pt.benchReturnPct;
+      curDate = new Date(pt.timestamp || pt.date);
+      yStr = curDate.getFullYear();
+
+      if (basPts && basPts[idx]) {
+        svgY = basPts[idx].y;
+      }
+    } else {
+      if (ratioX > 0.65 && ratioX < 0.85) {
+        const dipRatio = (ratioX - 0.75) / 0.1;
+        svgY += Math.max(0, (1 - dipRatio * dipRatio) * 35);
+      }
+      const eDate = new Date(document.getElementById('sim-end-date')?.value || getTodayString());
+      let sDate = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
+      const tf = state.chartTf || 'ALL';
+      const curYear = eDate.getFullYear();
+      if (tf === '10Y') sDate = new Date(curYear - 10, eDate.getMonth(), eDate.getDate());
+      else if (tf === '5Y') sDate = new Date(curYear - 5, eDate.getMonth(), eDate.getDate());
+      else if (tf === '3Y') sDate = new Date(curYear - 3, eDate.getMonth(), eDate.getDate());
+      else if (tf === '1Y') sDate = new Date(curYear - 1, eDate.getMonth(), eDate.getDate());
+      else if (tf === 'YTD') sDate = new Date(curYear, 0, 1);
+      const curTime = sDate.getTime() + ratioX * (eDate.getTime() - sDate.getTime());
+      curDate = new Date(curTime);
+      yStr = curDate.getFullYear();
+      const mStr = String(curDate.getMonth() + 1).padStart(2, '0');
+      dateStr = `${yStr}.${mStr}`;
+
+      const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 7.88;
+      curReturn = ((Math.pow(1 + cagr / 100, Math.max(0.1, (curTime - sDate.getTime()) / (365.25 * 24 * 3600 * 1000))) - 1) * 100);
+      benchReturn = curReturn * 0.62;
     }
+
     const pixelY = (svgY / 320) * rect.height;
 
-    // 날짜 계산 (활성 타임프레임 기준 시작일 ~ 종료일 사이 보간)
-    const eDate = new Date(document.getElementById('sim-end-date')?.value || getTodayString());
-    let sDate = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
-    const tf = state.chartTf || 'ALL';
-    const curYear = eDate.getFullYear();
-    if (tf === '10Y') sDate = new Date(curYear - 10, eDate.getMonth(), eDate.getDate());
-    else if (tf === '5Y') sDate = new Date(curYear - 5, eDate.getMonth(), eDate.getDate());
-    else if (tf === '3Y') sDate = new Date(curYear - 3, eDate.getMonth(), eDate.getDate());
-    else if (tf === '1Y') sDate = new Date(curYear - 1, eDate.getMonth(), eDate.getDate());
-    else if (tf === 'YTD') sDate = new Date(curYear, 0, 1);
-    const curTime = sDate.getTime() + ratioX * (eDate.getTime() - sDate.getTime());
-    const curDate = new Date(curTime);
-    const yStr = curDate.getFullYear();
-    const mStr = String(curDate.getMonth() + 1).padStart(2, '0');
-    const dateStr = `${yStr}.${mStr}`;
-
-    // 수익률 계산
-    const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 7.88;
-    const curReturn = ((Math.pow(1 + cagr / 100, Math.max(0.1, (curTime - sDate.getTime()) / (365.25 * 24 * 3600 * 1000))) - 1) * 100);
-    const benchReturn = curReturn * 0.62;
-
     // 특수 시장 이벤트 매핑
-    let eventHeader = `${dateStr} 포트폴리오 트래킹`;
+    let eventHeader = `${dateStr} 실시간 퀀트 백테스트 추적`;
     let eventTitle = state.mode === 'tripod' ? '나스닥 레버리지 트라이포드 운용' : '정적 자산배분 리밸런싱';
 
     if (yStr === 2020 && curDate.getMonth() >= 1 && curDate.getMonth() <= 4) {
@@ -2499,6 +2583,7 @@ def build():
       dot.setAttribute('cy', svgY);
       dot.setAttribute('opacity', '1');
     }
+
   }
 
   function handleChartLeave() {
