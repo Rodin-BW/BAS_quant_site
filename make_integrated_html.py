@@ -218,6 +218,28 @@ def build():
 </svg>"""
     b_body = re.sub(donut_section_old, donut_section_new, b_body, flags=re.DOTALL)
 
+    # 12.1 도넛 센터 메타 및 통화 노출 각주에 고유 ID 지정 (동적 종목 수 및 통화 비중 실시간 동기화)
+    b_body = re.sub(
+        r'<span class="font-kpi-numeric text-kpi-numeric font-bold text-on-surface">\s*4\s*종목\s*</span>',
+        r'<span id="donut-asset-count" class="font-kpi-numeric text-kpi-numeric font-bold text-on-surface">4 종목</span>',
+        b_body
+    )
+    b_body = re.sub(
+        r'<span class="font-label-sm text-\[10px\] text-secondary font-mono">\s*USD\s*100%\s*</span>',
+        r'<span id="donut-currency-exposure" class="font-label-sm text-[10px] text-secondary font-mono">USD 100%</span>',
+        b_body
+    )
+    b_body = re.sub(
+        r'<span class="text-on-surface-variant flex items-center gap-1">\s*<span class="w-2 h-2 rounded-full bg-primary-container"></span>\s*USD 달러 노출 100%\s*</span>',
+        r'<span class="text-on-surface-variant flex items-center gap-1" id="footnote-usd-exposure"><span class="w-2 h-2 rounded-full bg-primary-container"></span>USD 달러 노출 100%</span>',
+        b_body
+    )
+    b_body = re.sub(
+        r'<span class="text-outline flex items-center gap-1">\s*<span class="w-2 h-2 rounded-full bg-surface-container-highest"></span>\s*KRW 원화 노출 0%\s*</span>',
+        r'<span class="text-outline flex items-center gap-1" id="footnote-krw-exposure"><span class="w-2 h-2 rounded-full bg-surface-container-highest"></span>KRW 원화 노출 0%</span>',
+        b_body
+    )
+
     rows_old = r'<div class="md:col-span-7 flex flex-col gap-2">.*?</div>\s*</div>\s*</div>\s*<!-- TRIPOD LEVERAGE'
     rows_new = """<div class="md:col-span-7 flex flex-col gap-2" id="asset-list-container">
   <!-- Asset Rows Rendered Dynamically via JS -->
@@ -1677,31 +1699,118 @@ def build():
 
     const totalWeight = state.assets.reduce((sum, a) => sum + (parseFloat(a.weight) || 0), 0) || 100;
 
-    state.assets.forEach(asset => {
-      const pct = (parseFloat(asset.weight) || 0) / totalWeight;
-      const strokeDash = pct * circumference;
-      const strokeGap = circumference - strokeDash;
-      const offset = -(accumulatedAngle / 100) * circumference;
-
+    if (state.assets.length === 1) {
+      const asset = state.assets[0];
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('cx', '50');
       circle.setAttribute('cy', '50');
       circle.setAttribute('r', radius.toString());
       circle.setAttribute('fill', 'transparent');
-      circle.setAttribute('stroke', asset.color);
+      circle.setAttribute('stroke', asset.color || '#478fff');
       circle.setAttribute('stroke-width', '12');
-      circle.setAttribute('stroke-dasharray', `${strokeDash} ${strokeGap}`);
-      circle.setAttribute('stroke-dashoffset', offset.toString());
       circle.setAttribute('class', 'transition-all duration-300');
-
       group.appendChild(circle);
-      accumulatedAngle += pct * 100;
+    } else {
+      state.assets.forEach(asset => {
+        const pct = (parseFloat(asset.weight) || 0) / totalWeight;
+        const strokeDash = pct * circumference;
+        const strokeGap = circumference - strokeDash;
+        const offset = -(accumulatedAngle / 100) * circumference;
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '50');
+        circle.setAttribute('cy', '50');
+        circle.setAttribute('r', radius.toString());
+        circle.setAttribute('fill', 'transparent');
+        circle.setAttribute('stroke', asset.color || '#478fff');
+        circle.setAttribute('stroke-width', '12');
+        circle.setAttribute('stroke-dasharray', `${strokeDash} ${strokeGap}`);
+        circle.setAttribute('stroke-dashoffset', offset.toString());
+        circle.setAttribute('class', 'transition-all duration-300');
+
+        group.appendChild(circle);
+        accumulatedAngle += pct * 100;
+      });
+    }
+
+    // 도넛 중앙 종목 수 실시간 동적 갱신
+    const countEl = document.getElementById('donut-asset-count');
+    if (countEl) {
+      countEl.textContent = `${state.assets.length} 종목`;
+    }
+
+    // 도넛 중앙 및 하단 통화 노출 비중 실시간 동적 갱신 (USD vs KRW)
+    const currEl = document.getElementById('donut-currency-exposure');
+    const fnUsd = document.getElementById('footnote-usd-exposure');
+    const fnKrw = document.getElementById('footnote-krw-exposure');
+
+    let krwWeight = 0;
+    let usdWeight = 0;
+    state.assets.forEach(a => {
+      const tk = (a.ticker || a.name || '').toUpperCase();
+      const w = parseFloat(a.weight) || 0;
+      if (tk.endsWith('.KS') || tk.endsWith('.KQ')) {
+        krwWeight += w;
+      } else {
+        usdWeight += w;
+      }
     });
 
-    const caption = document.querySelector('.md\\:col-span-5 span.font-headline-sm');
-    if (caption) {
-      caption.textContent = `${state.assets.length} 종목`;
+    const krwPct = totalWeight > 0 ? Math.round((krwWeight / totalWeight) * 100) : 0;
+    const usdPct = Math.max(0, 100 - krwPct);
+
+    if (currEl) {
+      if (krwPct > 0 && usdPct > 0) {
+        currEl.textContent = `USD ${usdPct}% / KRW ${krwPct}%`;
+      } else if (krwPct === 100) {
+        currEl.textContent = `KRW 100%`;
+      } else {
+        currEl.textContent = `USD 100%`;
+      }
     }
+
+    if (fnUsd) {
+      fnUsd.innerHTML = `<span class="w-2 h-2 rounded-full bg-primary-container"></span>USD 달러 노출 ${usdPct}%`;
+    }
+    if (fnKrw) {
+      fnKrw.innerHTML = `<span class="w-2 h-2 rounded-full ${krwPct > 0 ? 'bg-secondary' : 'bg-surface-container-highest'}"></span>KRW 원화 노출 ${krwPct}%`;
+    }
+  }
+
+
+  function applyEqualWeight() {
+    setEqualWeights();
+  }
+
+  function applyPreset(presetType) {
+    if (presetType === 'allweather') {
+      state.assets = [
+        { key: 'SPY', ticker: 'SPY', name: 'SPDR S&P 500 ETF', type: 'US ETF', color: '#07c168', weight: 30 },
+        { key: 'TLT', ticker: 'TLT', name: 'iShares 20+ Year Tr.', type: 'US ETF', color: '#ffb3b2', weight: 40 },
+        { key: 'IEF', ticker: 'IEF', name: 'iShares 7-10 Year Tr.', type: 'US ETF', color: '#478fff', weight: 15 },
+        { key: 'GLD', ticker: 'GLD', name: 'SPDR Gold Trust', type: 'US ETF', color: '#acc7ff', weight: 7.5 },
+        { key: 'DBC', ticker: 'DBC', name: 'Invesco Commodity', type: 'US ETF', color: '#ffd08a', weight: 7.5 }
+      ];
+    } else if (presetType === 'permanent') {
+      state.assets = [
+        { key: 'SPY', ticker: 'SPY', name: 'SPDR S&P 500 ETF', type: 'US ETF', color: '#07c168', weight: 25 },
+        { key: 'TLT', ticker: 'TLT', name: 'iShares 20+ Year Tr.', type: 'US ETF', color: '#ffb3b2', weight: 25 },
+        { key: 'GLD', ticker: 'GLD', name: 'SPDR Gold Trust', type: 'US ETF', color: '#acc7ff', weight: 25 },
+        { key: 'CASH', ticker: 'CASH', name: 'USD Cash Buffer', type: 'CASH', color: '#478fff', weight: 25 }
+      ];
+    } else if (presetType === 'sixtyforty') {
+      state.assets = [
+        { key: 'SPY', ticker: 'SPY', name: 'SPDR S&P 500 ETF', type: 'US ETF', color: '#07c168', weight: 60 },
+        { key: 'TLT', ticker: 'TLT', name: 'iShares 20+ Year Tr.', type: 'US ETF', color: '#ffb3b2', weight: 40 }
+      ];
+    } else if (presetType === 'nasdaqfocus') {
+      state.assets = [
+        { key: 'QQQ', ticker: 'QQQ', name: 'Invesco QQQ Trust', type: 'US ETF', color: '#478fff', weight: 70 },
+        { key: 'TLT', ticker: 'TLT', name: 'iShares 20+ Year Tr.', type: 'US ETF', color: '#ffb3b2', weight: 30 }
+      ];
+    }
+    renderAssetList();
+    renderDonutChart();
   }
 
   function resetConfiguration() {

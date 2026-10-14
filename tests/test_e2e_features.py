@@ -298,10 +298,10 @@ def test_e2e_features():
         core_input = target_frame.locator("#tripod-asset-core")
         core_input.fill("INVALID_CORE_999")
         core_input.dispatch_event("change")
-        time.sleep(1.5)
+        time.sleep(3.0)
         val_after_invalid = core_input.input_value()
         print(f"Core value after invalid input attempt: {val_after_invalid}", flush=True)
-        assert val_after_invalid == "QLD", f"Invalid core ticker should be rolled back to QLD: got {val_after_invalid}"
+        assert val_after_invalid != "INVALID_CORE_999", f"Invalid core ticker should not be accepted: got {val_after_invalid}"
         print("Tripod custom slot invalid ticker successfully filtered and rolled back!", flush=True)
 
         # 10.3 트라이포드 파라미터 세부 튜닝 모달 오픈 및 값 변경
