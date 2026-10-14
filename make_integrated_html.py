@@ -195,12 +195,18 @@ def build():
 
     # 11. 검색창 및 + 추가 버튼 활성화 (id="ticker-search-input", onclick="addAsset()")
     search_bar_old = r'<div class="relative flex items-center">\s*<span class="material-symbols-outlined absolute left-3\.5 text-outline text-\[20px\]">search</span>\s*<input class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-11 pr-24 py-2\.5 rounded-lg outline-none focus:ring-1 focus:ring-primary shadow-inner placeholder:text-outline-variant" placeholder="[^"]*" type="text"/>\s*<button class="[^"]*" type="button">\s*<span class="material-symbols-outlined text-\[14px\]">add</span>추가\s*</button>\s*</div>'
-    search_bar_new = """<div class="relative flex items-center">
-  <span class="material-symbols-outlined absolute left-3.5 text-outline text-[20px]">search</span>
-  <input id="ticker-search-input" onkeydown="if(event.key==='Enter') addAsset();" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-11 pr-24 py-2.5 rounded-lg outline-none focus:ring-1 focus:ring-primary shadow-inner placeholder:text-outline-variant" placeholder="티커 또는 ETF 명 검색 (예: QLD, TQQQ, SCHD, 069500.KS, JEPI)" type="text"/>
-  <button onclick="addAsset()" class="absolute right-2 px-3 py-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant rounded-md font-label-sm text-label-sm font-semibold transition-all flex items-center gap-1 active:scale-95" type="button">
-    <span class="material-symbols-outlined text-[14px]">add</span>추가
-  </button>
+    search_bar_new = """<div class="flex flex-col gap-1">
+  <div class="relative flex items-center">
+    <span class="material-symbols-outlined absolute left-3.5 text-outline text-[20px]">search</span>
+    <input id="ticker-search-input" oninput="hideTickerError()" onkeydown="if(event.key==='Enter') addAsset();" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-11 pr-24 py-2.5 rounded-lg outline-none focus:ring-1 focus:ring-primary shadow-inner placeholder:text-outline-variant" placeholder="티커 또는 ETF 명 검색 (예: QLD, TQQQ, SCHD, 069500.KS, JEPI)" type="text"/>
+    <button id="btn-add-asset" onclick="addAsset()" class="absolute right-2 px-3 py-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant rounded-md font-label-sm text-label-sm font-semibold transition-all flex items-center gap-1 active:scale-95 cursor-pointer" type="button">
+      <span class="material-symbols-outlined text-[14px]">add</span>추가
+    </button>
+  </div>
+  <div id="ticker-error-box" class="hidden px-3 py-1.5 rounded-lg bg-error-container/30 border border-error/20 flex items-center gap-2 text-error text-xs transition-all">
+    <span class="material-symbols-outlined text-[16px]">error</span>
+    <span id="ticker-error-msg" class="font-medium"></span>
+  </div>
 </div>"""
     b_body = re.sub(search_bar_old, search_bar_new, b_body, flags=re.DOTALL)
 
@@ -287,7 +293,7 @@ def build():
             <option value="CUSTOM">직접 입력 (Custom)</option>
           </select>
         </div>
-        <input id="tripod-asset-buffer" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase text-sm" value="CASH" placeholder="CASH"/>
+        <input id="tripod-asset-buffer" oninput="handleTripodAssetChange()" onchange="validateTripodSlotInput('buffer')" class="w-full bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase text-sm" value="CASH" placeholder="CASH"/>
       </div>
       <div class="flex items-center justify-between pt-1">
         <span class="font-label-sm text-[11px] text-outline">평시 목표비중</span>
@@ -321,7 +327,7 @@ def build():
             <option value="CUSTOM">직접 입력 (Custom)</option>
           </select>
         </div>
-        <input id="tripod-asset-core" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-secondary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-secondary uppercase text-sm" value="QLD" placeholder="QLD"/>
+        <input id="tripod-asset-core" oninput="handleTripodAssetChange()" onchange="validateTripodSlotInput('core')" class="w-full bg-surface-container-lowest font-mono font-bold text-secondary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-secondary uppercase text-sm" value="QLD" placeholder="QLD"/>
       </div>
       <div class="flex items-center justify-between pt-1">
         <span class="font-label-sm text-[11px] text-outline">평시 목표비중</span>
@@ -356,7 +362,7 @@ def build():
             <option value="CUSTOM">직접 입력 (Custom)</option>
           </select>
         </div>
-        <input id="tripod-asset-base" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase text-sm" value="QQQ" placeholder="QQQ"/>
+        <input id="tripod-asset-base" oninput="handleTripodAssetChange()" onchange="validateTripodSlotInput('base')" class="w-full bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase text-sm" value="QQQ" placeholder="QQQ"/>
       </div>
       <div class="flex items-center justify-between pt-1">
         <span class="font-label-sm text-[11px] text-outline">평시 목표비중</span>
@@ -391,7 +397,7 @@ def build():
             <option value="CUSTOM">직접 입력 (Custom)</option>
           </select>
         </div>
-        <input id="tripod-asset-panic" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-tertiary-container px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-tertiary-container uppercase text-sm" value="TQQQ" placeholder="TQQQ"/>
+        <input id="tripod-asset-panic" oninput="handleTripodAssetChange()" onchange="validateTripodSlotInput('panic')" class="w-full bg-surface-container-lowest font-mono font-bold text-tertiary-container px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-tertiary-container uppercase text-sm" value="TQQQ" placeholder="TQQQ"/>
       </div>
       <div class="flex items-center justify-between pt-1">
         <span class="font-label-sm text-[11px] text-outline">평시 목표비중</span>
@@ -1022,6 +1028,13 @@ def build():
   }
 
   function syncTripodInputsFromState() {
+    state.tripodValid = {
+      buffer: state.tripod.buffer,
+      core: state.tripod.core,
+      base: state.tripod.base,
+      panic: state.tripod.panic
+    };
+
     const elBuf = document.getElementById('tripod-asset-buffer');
     const elCore = document.getElementById('tripod-asset-core');
     const elBase = document.getElementById('tripod-asset-base');
@@ -1079,6 +1092,75 @@ def build():
     if (elPanic) state.tripod.panic = elPanic.value.trim().toUpperCase() || 'TQQQ';
 
     updateTripodCardsUI();
+  }
+
+  async function validateTripodSlotInput(slot) {
+    const input = document.getElementById(`tripod-asset-${slot}`);
+    if (!input) return;
+    let raw = input.value.trim().toUpperCase();
+
+    if (!state.tripodValid) {
+      state.tripodValid = { buffer: 'CASH', core: 'QLD', base: 'QQQ', panic: 'TQQQ' };
+    }
+    const prevValid = state.tripodValid[slot] || 'QLD';
+
+    if (!raw) {
+      input.value = prevValid;
+      state.tripod[slot] = prevValid;
+      handleTripodAssetChange();
+      return;
+    }
+
+    if (slot === 'buffer' && (raw === 'CASH' || raw === 'USD')) {
+      state.tripodValid[slot] = raw;
+      state.tripod[slot] = raw;
+      handleTripodAssetChange();
+      return;
+    }
+
+    if (/^\\d{6}$/.test(raw)) {
+      raw = raw + '.KS';
+      input.value = raw;
+    }
+
+    if (ETF_CATALOG[raw]) {
+      state.tripodValid[slot] = raw;
+      state.tripod[slot] = raw;
+      handleTripodAssetChange();
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://127.0.0.1:8502/api/validate-ticker?ticker=${encodeURIComponent(raw)}`);
+      if (res.ok) {
+        const valData = await res.json();
+        if (valData.valid) {
+          ETF_CATALOG[raw] = {
+            name: valData.name || `${raw} Asset`,
+            type: valData.type || (raw.endsWith('.KS') ? 'KRX ETF' : 'US ETF'),
+            color: '#478fff'
+          };
+          state.tripodValid[slot] = raw;
+          state.tripod[slot] = raw;
+          handleTripodAssetChange();
+          return;
+        }
+      }
+    } catch (e) {
+      // offline fallback
+      if (/^[A-Z]{1,5}$/.test(raw) || /^\\d{6}\\.(KS|KQ)$/.test(raw)) {
+        state.tripodValid[slot] = raw;
+        state.tripod[slot] = raw;
+        handleTripodAssetChange();
+        return;
+      }
+    }
+
+    // 검증 실패 시: 항상 이전의 유효한 종목으로 롤백!
+    alert(`❌ [트라이포드 종목 검증 실패]\n\n'${raw}'은(는) 거래소에 존재하지 않거나 시세 데이터를 지원하지 않는 유효하지 않은 티커입니다.\n원래 종목(${prevValid})으로 복원합니다.`);
+    input.value = prevValid;
+    state.tripod[slot] = prevValid;
+    handleTripodAssetChange();
   }
 
   function handleTripodWeightChange() {
@@ -1483,22 +1565,93 @@ def build():
     normalizeWeights();
   }
 
-  function addAsset() {
+  function showTickerError(msg) {
+    const box = document.getElementById('ticker-error-box');
+    const el = document.getElementById('ticker-error-msg');
+    if (box && el) {
+      el.textContent = msg;
+      box.classList.remove('hidden');
+    }
+  }
+
+  function hideTickerError() {
+    const box = document.getElementById('ticker-error-box');
+    if (box) box.classList.add('hidden');
+  }
+
+  async function addAsset() {
+    hideTickerError();
     const input = document.getElementById('ticker-search-input');
     if (!input) return;
-    const raw = input.value.trim().toUpperCase();
+    let raw = input.value.trim().toUpperCase();
     if (!raw) return;
 
+    // 한국 6자리 숫자 티커 정규화 (예: 005930 -> 005930.KS)
+    if (/^\\d{6}$/.test(raw)) {
+      raw = raw + '.KS';
+    }
+
     if (state.assets.some(a => a.ticker === raw)) {
-      alert(`${raw} 종목은 이미 포트폴리오에 추가되어 있습니다.`);
+      const msg = `'${raw}' 종목은 이미 포트폴리오에 추가되어 있습니다.`;
+      showTickerError(msg);
+      alert(msg);
       return;
     }
 
-    const info = ETF_CATALOG[raw] || {
-      name: `${raw} Index Tracking ETF`,
-      type: raw.endsWith('.KS') ? 'KRX ETF' : 'US ETF',
-      color: PALETTE[state.assets.length % PALETTE.length]
-    };
+    let info = ETF_CATALOG[raw];
+    if (!info) {
+      // yfinance 실시간 API를 통해 실제 존재하는 종목인지 철저히 검증 및 필터링
+      const origPlaceholder = input.placeholder;
+      input.disabled = true;
+      input.placeholder = `"${raw}" 거래소 시세 검증 중...`;
+
+      try {
+        const res = await fetch(`http://127.0.0.1:8502/api/validate-ticker?ticker=${encodeURIComponent(raw)}`);
+        if (res.ok) {
+          const valData = await res.json();
+          if (valData.valid) {
+            info = {
+              name: valData.name || `${raw} Asset`,
+              type: valData.type || (raw.endsWith('.KS') ? 'KRX ETF' : 'US ETF'),
+              color: PALETTE[state.assets.length % PALETTE.length]
+            };
+            ETF_CATALOG[raw] = info;
+          } else {
+            const errText = `'${raw}'은(는) 거래소에 존재하지 않거나 시세 데이터를 지원하지 않는 유효하지 않은 티커입니다.`;
+            showTickerError(errText);
+            alert(`❌ [존재하지 않는 종목]\n\n${errText}\n\n올바른 종목 심볼(예: SPY, QQQ, NVDA, AAPL, 005930 등)을 입력해주세요.`);
+            input.disabled = false;
+            input.placeholder = origPlaceholder;
+            input.focus();
+            input.select();
+            return;
+          }
+        } else {
+          throw new Error("Validation Server Error");
+        }
+      } catch (e) {
+        // 백엔드 API 연결 장애 시 로컬 정규식 안전망 필터링
+        const isValidFormat = /^[A-Z]{1,5}$/.test(raw) || /^\\d{6}\\.(KS|KQ)$/.test(raw);
+        if (!isValidFormat) {
+          const errText = `'${raw}'은(는) 유효한 주식/ETF 심볼 형식이 아닙니다.`;
+          showTickerError(errText);
+          alert(`❌ [유효하지 않은 티커 형식]\n\n${errText}\n영문 1~5자리 티커(예: SPY, QQQ, NVDA) 또는 한국 6자리 코드(예: 005930)를 입력해주세요.`);
+          input.disabled = false;
+          input.placeholder = origPlaceholder;
+          input.focus();
+          input.select();
+          return;
+        }
+        info = {
+          name: `${raw} Index Tracking ETF`,
+          type: raw.endsWith('.KS') ? 'KRX ETF' : 'US ETF',
+          color: PALETTE[state.assets.length % PALETTE.length]
+        };
+      } finally {
+        input.disabled = false;
+        input.placeholder = origPlaceholder;
+      }
+    }
 
     state.assets.push({
       key: raw,

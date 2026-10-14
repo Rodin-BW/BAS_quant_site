@@ -44,7 +44,49 @@ def test_e2e_features():
         total_badge = target_frame.locator("#total-weight-pill").text_content()
         print(f"Total weight pill after 1/N: {total_badge.strip()}", flush=True)
         assert "100.0%" in total_badge
-        
+
+        # =========================================================================
+        # [신규 검증] 없는 종목 필터링 및 유효 종목 실시간 추가 검증
+        # =========================================================================
+        print("2.1 Testing non-existent ticker filtering...", flush=True)
+        dialog_messages = []
+        page.on("dialog", lambda dialog: (dialog_messages.append(dialog.message), dialog.accept()))
+
+        search_input = target_frame.locator("#ticker-search-input")
+        add_btn = target_frame.locator("#btn-add-asset")
+        error_box = target_frame.locator("#ticker-error-box")
+        error_msg = target_frame.locator("#ticker-error-msg")
+
+        # 1) 없는 종목 입력 후 추가 시도
+        search_input.fill("INVALID_TICKER_999")
+        add_btn.dispatch_event("click")
+        time.sleep(2)
+
+        # 에러 박스 또는 다이얼로그 경고 메시지가 발생했는지 확인
+        error_text = error_msg.text_content().strip() if error_msg.count() > 0 else ""
+        print(f"Captured Error Banner Text: '{error_text}' | Dialogs: {dialog_messages}", flush=True)
+        assert "존재하지 않거나" in error_text or any("존재하지 않는 종목" in msg or "유효하지 않은" in msg for msg in dialog_messages), "Non-existent ticker should trigger warning alert or error banner"
+
+        # 자산 목록에 INVALID_TICKER_999가 절대 추가되지 않았는지 확인
+        asset_list_text = target_frame.locator("#asset-list-container").text_content()
+        assert "INVALID_TICKER_999" not in asset_list_text, "Invalid ticker must NOT be added to portfolio"
+        print("Non-existent ticker successfully filtered out!", flush=True)
+
+        # 2) 실제 존재하는 종목(NVDA) 입력 후 추가 시도
+        print("2.2 Testing valid live ticker addition (NVDA)...", flush=True)
+        search_input.fill("NVDA")
+        add_btn.dispatch_event("click")
+        time.sleep(2.5)
+
+        asset_list_text_after = target_frame.locator("#asset-list-container").text_content()
+        assert "NVDA" in asset_list_text_after, "Valid ticker NVDA should be added to portfolio"
+        print("Valid ticker (NVDA) successfully verified and added to portfolio!", flush=True)
+
+        # 종목 필터링 및 추가 검증 스크린샷 저장
+        ticker_filter_screenshot = os.path.join(artifact_dir, "ticker_filter_and_valid_add_verified.png")
+        page.screenshot(path=ticker_filter_screenshot, full_page=True)
+        print(f"Ticker filter verification screenshot saved to {ticker_filter_screenshot}", flush=True)
+
         # 2. 날짜 피커 제한 해제 확인 (max 속성이 제거되어 최신 날짜 제한 없음)
         print("3. Checking date picker range (max attribute unlocked)...", flush=True)
         end_date_input = target_frame.locator("#sim-end-date")
@@ -250,6 +292,17 @@ def test_e2e_features():
         assert target_frame.locator("#tripod-asset-core").input_value() == "QLD", "Core input should sync to QLD"
         assert target_frame.locator("#tripod-asset-panic").input_value() == "TQQQ", "Panic input should sync to TQQQ"
         print("Tripod asset slot dropdown sync verified successfully!", flush=True)
+
+        # 10.2-1 트라이포드 직접 입력 슬롯에 없는 종목 입력 시 필터링 검증
+        print("13.1 Testing invalid ticker filtering on Tripod custom input...", flush=True)
+        core_input = target_frame.locator("#tripod-asset-core")
+        core_input.fill("INVALID_CORE_999")
+        core_input.dispatch_event("change")
+        time.sleep(1.5)
+        val_after_invalid = core_input.input_value()
+        print(f"Core value after invalid input attempt: {val_after_invalid}", flush=True)
+        assert val_after_invalid == "QLD", f"Invalid core ticker should be rolled back to QLD: got {val_after_invalid}"
+        print("Tripod custom slot invalid ticker successfully filtered and rolled back!", flush=True)
 
         # 10.3 트라이포드 파라미터 세부 튜닝 모달 오픈 및 값 변경
         print("14. Testing Tripod Parameter Tuning Modal...", flush=True)

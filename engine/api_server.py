@@ -7,18 +7,31 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+from urllib.parse import urlparse, parse_qs
+
 # 경로 등록
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from engine.data import normalize_ticker, is_korean_ticker
+from engine.data import normalize_ticker, is_korean_ticker, POPULAR_ETF_CATALOG
 from engine.backtest import calculate_metrics, calculate_drawdown, compute_monthly_returns_matrix
 
 _server_instance = None
 _server_thread = None
 
 class BacktestAPIHandler(BaseHTTPRequestHandler):
+    def send_json_response(self, code: int, data: dict):
+        payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(payload)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+        self.wfile.write(payload)
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -27,12 +40,75 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path in ('/health', '/api/health'):
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({'status': 'ok', 'service': 'yfinance-backtest-api'}).encode('utf-8'))
+        parsed = urlparse(self.path)
+        if parsed.path in ('/health', '/api/health'):
+            self.send_json_response(200, {'status': 'ok', 'service': 'yfinance-backtest-api'})
+        elif parsed.path in ('/api/validate-ticker', '/validate-ticker'):
+            qs = parse_qs(parsed.query)
+            ticker_param = qs.get('ticker', [''])[0].strip().upper()
+            if not ticker_param:
+                self.send_json_response(400, {'valid': False, 'error': '티커(심볼)를 입력해주세요.'})
+                return
+
+            clean_ticker = normalize_ticker(ticker_param)
+            if clean_ticker in ('CASH', 'USD'):
+                self.send_json_response(200, {
+                    'valid': True,
+                    'ticker': clean_ticker,
+                    'name': 'USD 현금 및 무위험 안전자산',
+                    'type': '현금성 자산'
+                })
+                return
+
+            # 1. 기등록 카탈로그 확인
+            if clean_ticker in POPULAR_ETF_CATALOG:
+                desc = POPULAR_ETF_CATALOG[clean_ticker]
+                name = desc.split('|')[-1].strip() if '|' in desc else desc
+                asset_type = 'KRX ETF' if clean_ticker.endswith(('.KS', '.KQ')) else 'US ETF'
+                self.send_json_response(200, {
+                    'valid': True,
+                    'ticker': clean_ticker,
+                    'name': name,
+                    'type': asset_type
+                })
+                return
+
+            # 2. yfinance 시세 데이터 실시간 유효성 확인
+            try:
+                t = yf.Ticker(clean_ticker)
+                hist = t.history(period='5d')
+                if hist.empty or len(hist) == 0:
+                    self.send_json_response(200, {
+                        'valid': False,
+                        'ticker': clean_ticker,
+                        'error': f"'{clean_ticker}' 종목은 거래소에 존재하지 않거나 시세 데이터를 가져올 수 없습니다."
+                    })
+                    return
+
+                # 종목명 획득 시도
+                info_name = None
+                try:
+                    info = t.info
+                    info_name = info.get('shortName') or info.get('longName')
+                except Exception:
+                    pass
+
+                if not info_name:
+                    info_name = f"{clean_ticker} Index Asset"
+
+                asset_type = 'KRX 종목' if clean_ticker.endswith(('.KS', '.KQ')) else 'US 종목/ETF'
+                self.send_json_response(200, {
+                    'valid': True,
+                    'ticker': clean_ticker,
+                    'name': info_name,
+                    'type': asset_type
+                })
+            except Exception as e:
+                self.send_json_response(200, {
+                    'valid': False,
+                    'ticker': clean_ticker,
+                    'error': f"티커 검증 중 오류 발생: {str(e)}"
+                })
         else:
             self.send_response(404)
             self.end_headers()
@@ -44,17 +120,9 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
             try:
                 req = json.loads(body)
                 result = self.process_backtest(req)
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+                self.send_json_response(200, result)
             except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+                self.send_json_response(500, {'error': str(e)})
         else:
             self.send_response(404)
             self.end_headers()
