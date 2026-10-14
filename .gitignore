@@ -4,7 +4,6 @@ __pycache__/
 .coverage
 htmlcov/
 .streamlit/secrets.toml
-tests/
 .system_generated/
 *.png
 *.csv

@@ -20,6 +20,10 @@ from engine.backtest import (
     calculate_drawdown,
 )
 from engine.data import fetch_etf_data
+from engine.api_server import start_api_server
+
+# 0. 백엔드 yfinance 실시간 연산 API 서버 가동 (Port 8502)
+start_api_server(8502)
 
 # 1. Streamlit 전역 페이지 설정
 st.set_page_config(
