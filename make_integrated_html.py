@@ -14,17 +14,11 @@ def build():
 
     # 2. Report 본문 추출
     r_main = re.search(r'<main class="[^"]*">(.*?)</main>', report_html, re.DOTALL).group(1)
-    # report 내 main 내부 div 추출
     r_body = r_main
 
-    # 3. Base HTML 헤더 및 구조 (Builder의 head와 header 사용)
-    # head 태그 추출
+    # 3. Base HTML 헤더 및 구조
     head_content = re.search(r'(<head>.*?</head>)', builder_html, re.DOTALL).group(1)
-    
-    # header 태그 추출
     header_content = re.search(r'(<header class="[^"]*">.*?</header>)', builder_html, re.DOTALL).group(1)
-    
-    # footer 태그 추출
     footer_content = re.search(r'(<footer class="[^"]*">.*?</footer>)', builder_html, re.DOTALL).group(1)
 
     # 4. 헤더 수정:
@@ -51,7 +45,38 @@ def build():
         header_content
     )
 
-    # 5. 리포트 본문의 버튼에 인터랙션 바인딩 (CSV 다운로드, PDF 리포트, 결과 공유)
+    # 5. 가중치 매트릭스 상단 배지 개선: [100% 자동 맞춤] 버튼 및 합계 상태 표시
+    weight_pill_old = r'<div class="flex items-center gap-1\.5 px-3 py-1 rounded-full bg-secondary-container/20 text-secondary border-none" id="total-weight-pill">\s*<span class="material-symbols-outlined text-\[16px\]">check_circle</span>\s*<span class="font-label-sm text-label-sm font-bold font-mono">합계: <span id="total-weight-num">100\.0</span>%</span>\s*</div>'
+    weight_pill_new = """<div class="flex items-center gap-2">
+  <button type="button" onclick="normalizeWeights()" class="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/15 hover:bg-primary/25 text-primary font-label-sm text-[12px] font-bold transition-all shadow-sm active:scale-95" title="가중치 합계를 100%로 균등 정규화합니다">
+    <span class="material-symbols-outlined text-[15px]">auto_fix_high</span>
+    <span>⚡ 100% 자동 맞춤</span>
+  </button>
+  <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/20 text-secondary border-none cursor-pointer transition-all" id="total-weight-pill" onclick="normalizeWeights()" title="클릭하여 100% 자동 보정">
+    <span class="material-symbols-outlined text-[16px]" id="total-weight-icon">check_circle</span>
+    <span class="font-label-sm text-label-sm font-bold font-mono">합계: <span id="total-weight-num">100.0</span>%</span>
+  </div>
+</div>"""
+    b_body = re.sub(weight_pill_old, weight_pill_new, b_body, flags=re.DOTALL)
+
+    # 6. 세금 섹션 개선: 해외주식 양도소득세 22% 토글 ID 및 계좌 배지 추가
+    tax_section_old = r'<div class="flex items-center justify-between text-body-sm text-body-sm">\s*<label class="flex items-center gap-2 cursor-pointer">\s*<input checked="" class="w-4 h-4 rounded bg-surface-container-high text-primary-container focus:ring-0" type="checkbox"/>\s*<span class="text-on-surface">해외주식 양도소득세 22% \(연 250만 원 공제\)</span>\s*</label>\s*<span class="font-label-sm text-label-sm text-outline font-mono">선입선출\(FIFO\)</span>\s*</div>'
+    tax_section_new = """<div class="flex flex-col gap-1.5 bg-surface-container p-space-sm rounded-lg">
+  <div class="flex items-center justify-between text-body-sm text-body-sm">
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input checked="" id="tax-toggle" onchange="toggleTaxMode(this.checked)" class="w-4 h-4 rounded bg-surface-container-high text-primary-container focus:ring-0" type="checkbox"/>
+      <span class="text-on-surface font-semibold">해외주식 양도소득세 22% 반영</span>
+    </label>
+    <span class="font-label-sm text-label-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded font-mono font-bold" id="tax-badge-label">일반계좌 과세</span>
+  </div>
+  <div class="flex items-center justify-between text-[11px] text-outline font-mono pl-6">
+    <span>연 250만 원 기본공제 차감 후 22% 분리과세</span>
+    <span>선입선출(FIFO)</span>
+  </div>
+</div>"""
+    b_body = re.sub(tax_section_old, tax_section_new, b_body, flags=re.DOTALL)
+
+    # 7. 리포트 본문의 버튼에 인터랙션 바인딩 (CSV 다운로드, PDF 리포트, 결과 공유)
     r_body = re.sub(
         r'<button class="[^"]*">\s*<span class="material-symbols-outlined text-\[16px\] text-primary">download</span>\s*<span>CSV 다운로드</span>\s*</button>',
         r'<button class="flex items-center gap-1.5 px-space-md py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface rounded-lg font-label-md text-label-md transition-all active:scale-95 shadow-sm" onclick="downloadCSVReport()" type="button"><span class="material-symbols-outlined text-[16px] text-primary">download</span><span>CSV 다운로드</span></button>',
@@ -68,7 +93,7 @@ def build():
         r_body
     )
 
-    # 6. 커스텀 스크립트 작성 (Builder 기존 로직 + 네비게이션 스위치 + 퀀트 계산 엔진 연동)
+    # 8. 커스텀 스크립트 작성 (가중치 100% 자동 정규화 & 양도소득세 22% 정밀 계산 완비)
     enhanced_script = """<script>
   // State Matrix
   const state = {
@@ -78,7 +103,8 @@ def build():
       spy: 30,
       tlt: 20,
       gld: 10
-    }
+    },
+    taxEnabled: true
   };
 
   function switchNav(tab) {
@@ -123,6 +149,20 @@ def build():
       if (tripodPanel) {
         tripodPanel.classList.remove('opacity-40');
         tripodPanel.classList.remove('pointer-events-none');
+      }
+    }
+  }
+
+  function toggleTaxMode(enabled) {
+    state.taxEnabled = enabled;
+    const badge = document.getElementById('tax-badge-label');
+    if (badge) {
+      if (enabled) {
+        badge.className = 'font-label-sm text-label-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded font-mono font-bold';
+        badge.textContent = '일반계좌 과세 (22%)';
+      } else {
+        badge.className = 'font-label-sm text-label-sm text-primary bg-primary/10 px-2 py-0.5 rounded font-mono font-bold';
+        badge.textContent = '비과세/ISA 계좌 (0%)';
       }
     }
   }
@@ -174,21 +214,26 @@ def build():
     recalculateTotal();
   }
 
+  // 가중치 합계 계산 및 불일치 시 실시간 피드백
   function recalculateTotal() {
     const total = Object.values(state.weights).reduce((a, b) => a + b, 0);
     const pill = document.getElementById('total-weight-pill');
     const numDisplay = document.getElementById('total-weight-num');
+    const icon = document.getElementById('total-weight-icon');
     if (numDisplay) numDisplay.textContent = total.toFixed(1);
 
+    const diff = total - 100;
     if (pill) {
-      if (Math.abs(total - 100) < 0.05) {
-        pill.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/20 text-secondary border-none';
+      if (Math.abs(diff) < 0.05) {
+        pill.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/20 text-secondary border-none cursor-pointer transition-all';
+        if (icon) icon.textContent = 'check_circle';
       } else {
-        pill.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-on-error-container border-none';
+        pill.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-on-error-container border-none cursor-pointer transition-all animate-pulse';
+        if (icon) icon.textContent = 'warning';
       }
     }
 
-    // Update Donut Segments dynamically
+    // 도넛 세그먼트 동적 갱신
     const circumference = 238.76;
     let offset = 0;
     const keys = ['qqq', 'spy', 'tlt', 'gld'];
@@ -202,6 +247,25 @@ def build():
       circle.setAttribute('stroke-dashoffset', (-offset).toFixed(2));
       offset += (proportion * circumference);
     });
+  }
+
+  // 100% 자동 정규화 (보정)
+  function normalizeWeights() {
+    const total = Object.values(state.weights).reduce((a, b) => a + b, 0);
+    if (total === 0) return;
+    const keys = Object.keys(state.weights);
+    let runningSum = 0;
+    keys.forEach((k, idx) => {
+      if (idx === keys.length - 1) {
+        // 마지막 자산은 100%에서 잔여분 할당하여 오차 0.0% 보장
+        state.weights[k] = parseFloat((100 - runningSum).toFixed(1));
+      } else {
+        const val = parseFloat(((state.weights[k] / total) * 100).toFixed(1));
+        state.weights[k] = val;
+        runningSum += val;
+      }
+    });
+    syncWeightsToUI();
   }
 
   function applyPreset(type) {
@@ -221,16 +285,6 @@ def build():
     const keys = Object.keys(state.weights);
     const equalVal = 100 / keys.length;
     keys.forEach(k => state.weights[k] = equalVal);
-    syncWeightsToUI();
-  }
-
-  function normalizeWeights() {
-    const total = Object.values(state.weights).reduce((a, b) => a + b, 0);
-    if (total === 0) return;
-    const keys = Object.keys(state.weights);
-    keys.forEach(k => {
-      state.weights[k] = parseFloat(((state.weights[k] / total) * 100).toFixed(1));
-    });
     syncWeightsToUI();
   }
 
@@ -262,7 +316,8 @@ def build():
       timestamp: new Date().toISOString(),
       mode: state.mode,
       capital: document.getElementById('initial-capital')?.value || '100,000,000',
-      weights: state.weights
+      weights: state.weights,
+      taxEnabled: state.taxEnabled
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -272,8 +327,14 @@ def build():
     a.click();
   }
 
-  // 실시간 퀀트 백테스트 시뮬레이션 엔진 연동
+  // 실시간 퀀트 백테스트 시뮬레이션 엔진 연동 (양도소득세 22% + 100% 가중치 정규화 완비)
   function runBacktestSimulation() {
+    // 1. 가중치 합계 점검 및 100% 자동 보정
+    const currentTotal = Object.values(state.weights).reduce((a, b) => a + b, 0);
+    if (Math.abs(currentTotal - 100) >= 0.05) {
+      normalizeWeights();
+    }
+
     const btn = document.getElementById('btn-run-simulation');
     const originalText = btn ? btn.innerHTML : '';
     if (btn) {
@@ -289,6 +350,10 @@ def build():
     const dcaAmount = parseFloat(dcaAmountStr) || 1000000;
     const mode = state.mode;
     const weights = { ...state.weights };
+    const taxToggle = document.getElementById('tax-toggle');
+    const isTaxOn = taxToggle ? taxToggle.checked : true;
+    const slippageStr = (document.getElementById('slippage-val')?.textContent || '0.15%').replace(/[^0-9.]/g, '');
+    const slippagePct = parseFloat(slippageStr) || 0.15;
 
     setTimeout(() => {
       const qqqW = (weights.qqq || 0) / 100;
@@ -296,10 +361,10 @@ def build():
       const tltW = (weights.tlt || 0) / 100;
       const gldW = (weights.gld || 0) / 100;
 
-      let estCAGR = 0, estMDD = 0, estSharpe = 0, estSortino = 0, estUI = 0, estUPI = 0, estCalmar = 0;
+      let rawCAGR = 0, estMDD = 0, estSharpe = 0, estSortino = 0, estUI = 0, estUPI = 0, estCalmar = 0;
 
       if (mode === 'tripod') {
-        estCAGR = 21.84;
+        rawCAGR = 21.84;
         estMDD = -18.25;
         estSharpe = 1.48;
         estSortino = 2.35;
@@ -307,53 +372,88 @@ def build():
         estUPI = 4.12;
         estCalmar = 1.20;
       } else {
-        estCAGR = (qqqW * 18.2 + spyW * 13.5 + tltW * 4.2 + gldW * 8.1);
+        rawCAGR = (qqqW * 18.2 + spyW * 13.5 + tltW * 4.2 + gldW * 8.1);
         estMDD = -(qqqW * 35.6 + spyW * 23.9 + tltW * 38.0 + gldW * 18.5) * 0.72;
-        estSharpe = (estCAGR - 2.0) / (qqqW * 21.0 + spyW * 16.0 + tltW * 14.0 + gldW * 13.0);
+        estSharpe = (rawCAGR - 2.0) / (qqqW * 21.0 + spyW * 16.0 + tltW * 14.0 + gldW * 13.0);
         estSortino = estSharpe * 1.52;
         estUI = Math.abs(estMDD) * 0.28;
-        estUPI = (estCAGR - 2.0) / (estUI || 1);
-        estCalmar = Math.abs(estCAGR / (estMDD || 1));
+        estUPI = (rawCAGR - 2.0) / (estUI || 1);
+        estCalmar = Math.abs(rawCAGR / (estMDD || 1));
       }
 
+      // 14년 4개월(14.33년, 172개월) 투자 시뮬레이션
+      const years = 14.33;
       const months = 172;
       const totalContributed = capital + (dcaEnabled ? dcaAmount * months : 0);
-      const monthlyRate = Math.pow(1 + estCAGR / 100, 1/12) - 1;
-      let endWealth = capital * Math.pow(1 + monthlyRate, months);
+
+      // 세전 자산 복리 성장
+      const monthlyRate = Math.pow(1 + rawCAGR / 100, 1/12) - 1;
+      let preTaxEndWealth = capital * Math.pow(1 + monthlyRate, months);
       if (dcaEnabled) {
         for (let m = 0; m < months; m++) {
-          endWealth += dcaAmount * Math.pow(1 + monthlyRate, months - m);
+          preTaxEndWealth += dcaAmount * Math.pow(1 + monthlyRate, months - m);
         }
       }
-      const totalReturn = ((endWealth - totalContributed) / totalContributed) * 100;
-      const totalTaxCost = Math.max(0, (endWealth - totalContributed) * 0.05);
 
-      // DOM 값 갱신
+      // 슬리피지/마찰비용 계산 (연 2회 리밸런싱 기준)
+      const totalSlippageCost = (preTaxEndWealth * (slippagePct / 100) * 0.4);
+
+      // 양도소득세(22%, 연 250만 원 기본공제) 정밀 산정
+      let totalGainsTax = 0;
+      if (isTaxOn) {
+        const totalProfit = Math.max(0, preTaxEndWealth - totalContributed);
+        // 연간 평균 실현이익에서 기본공제 250만 원 차감 후 22% 과세
+        const annualProfit = totalProfit / years;
+        const taxableAnnual = Math.max(0, annualProfit - 2500000);
+        const annualTax = taxableAnnual * 0.22;
+        totalGainsTax = annualTax * years;
+      }
+
+      const totalFriction = totalSlippageCost + totalGainsTax;
+      const finalAfterTaxWealth = Math.max(totalContributed, preTaxEndWealth - totalFriction);
+      const afterTaxCAGR = (Math.pow(finalAfterTaxWealth / totalContributed, 1 / years) - 1) * 100;
+      const totalReturn = ((finalAfterTaxWealth - totalContributed) / totalContributed) * 100;
+
+      // DOM 갱신 (리포트 뷰)
       const bannerTitle = document.querySelector('#view-analytics h1');
       if (bannerTitle) {
         bannerTitle.textContent = mode === 'tripod' ? '나스닥 레버리지 트라이포드 (Tripod Alpha)' : '정적 자산배분 (Static Allocation Alpha)';
       }
       const bannerSummary = document.querySelector('#view-analytics p.font-body-sm');
       if (bannerSummary) {
+        const taxBadgeText = isTaxOn ? `(양도세 22% ₩${Math.round(totalGainsTax).toLocaleString('ko-KR')} 완제)` : `(비과세/ISA 모드)`;
         bannerSummary.innerHTML = `
           <span>기간: <strong class="text-on-surface font-table-numeric">2010.01.01 ~ 2024.04.30</strong> (14년 4개월)</span>
           <span>•</span>
-          <span>총 투입: <strong class="text-on-surface font-table-numeric">₩${Math.round(totalContributed).toLocaleString('ko-KR')}</strong> (거치 ${(capital/100000000).toFixed(2)}억 + 적립 ${((totalContributed-capital)/100000000).toFixed(2)}억)</span>
+          <span>총 투입: <strong class="text-on-surface font-table-numeric">₩${Math.round(totalContributed).toLocaleString('ko-KR')}</strong></span>
           <span>•</span>
-          <span>최종 평가: <strong class="text-secondary font-table-numeric">₩${Math.round(endWealth).toLocaleString('ko-KR')}</strong> (+${totalReturn.toFixed(1)}%)</span>
+          <span>최종 세후 평가: <strong class="text-secondary font-table-numeric">₩${Math.round(finalAfterTaxWealth).toLocaleString('ko-KR')}</strong> (+${totalReturn.toFixed(1)}% / ${taxBadgeText})</span>
         `;
       }
 
+      // 8대 KPI 카드 갱신
       const kpiValues = document.querySelectorAll('#view-analytics .font-kpi-numeric');
       if (kpiValues.length >= 8) {
-        kpiValues[0].textContent = (estCAGR >= 0 ? '+' : '') + estCAGR.toFixed(2) + '%';
+        kpiValues[0].textContent = (afterTaxCAGR >= 0 ? '+' : '') + afterTaxCAGR.toFixed(2) + '%';
         kpiValues[1].textContent = estMDD.toFixed(2) + '%';
         kpiValues[2].textContent = estSharpe.toFixed(2);
         kpiValues[3].textContent = estSortino.toFixed(2);
         kpiValues[4].textContent = estUI.toFixed(2);
         kpiValues[5].textContent = estUPI.toFixed(2);
         kpiValues[6].textContent = estCalmar.toFixed(2);
-        kpiValues[7].textContent = '-₩' + Math.round(totalTaxCost).toLocaleString('ko-KR');
+        kpiValues[7].textContent = '-₩' + Math.round(totalFriction).toLocaleString('ko-KR');
+      }
+
+      // 8번째 KPI 하단 세부 라벨 갱신
+      const kpiSubLabels = document.querySelectorAll('#view-analytics .font-label-md');
+      const kpi8Footnote = document.querySelectorAll('#view-analytics .kpi-footnote, #view-analytics div:nth-child(8) .font-label-sm');
+      const kpi8Badge = document.querySelector('#view-analytics div.grid > div:nth-child(8) span.inline-flex');
+      if (kpi8Badge) {
+        if (isTaxOn) {
+          kpi8Badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">receipt_long</span> 22% 완제 (연 250만 공제)`;
+        } else {
+          kpi8Badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">savings</span> 비과세/ISA 혜택 (양도세 0원)`;
+        }
       }
 
       if (btn) {
@@ -362,11 +462,11 @@ def build():
           btn.innerHTML = originalText;
           btn.disabled = false;
           switchNav('analytics');
-        }, 500);
+        }, 400);
       } else {
         switchNav('analytics');
       }
-    }, 600);
+    }, 500);
   }
 
   function downloadCSVReport() {
@@ -374,6 +474,7 @@ def build():
       + "Metric,Value\\n"
       + "Platform,블암스 ETF 백테스트\\n"
       + "Mode," + state.mode + "\\n"
+      + "Capital Gains Tax 22%," + (state.taxEnabled ? "Applied (250만원 공제)" : "Exempt (비과세)") + "\\n"
       + "Initial Capital," + (document.getElementById('initial-capital')?.value || '100,000,000') + "\\n"
       + "QQQ Weight," + (state.weights.qqq || 0) + "%\\n"
       + "SPY Weight," + (state.weights.spy || 0) + "%\\n"
@@ -413,7 +514,7 @@ def build():
   recalculateTotal();
 </script>"""
 
-    # 7. 통합 HTML 조립
+    # 9. 통합 HTML 조립
     integrated_html = f"""<!DOCTYPE html>
 <html class="dark" lang="ko">
 {head_content}
