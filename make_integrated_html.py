@@ -198,6 +198,14 @@ def build():
         b_body
     )
 
+    # 13.5 리포트 상단 액션 툴바 (CSV 다운로드, PDF 리포트, 결과 공유) 제거
+    r_body = re.sub(
+        r'<!-- Action Toolbar -->\s*<div class="flex flex-wrap items-center gap-space-xs sm:gap-space-sm self-start xl:self-center">.*?</div>',
+        '',
+        r_body,
+        flags=re.DOTALL
+    )
+
     # 14. 리포트 본문의 차트 스케일 및 기간 필터 버튼 바인딩
     r_body = re.sub(
         r'<div class="inline-flex bg-surface-container-low p-1 rounded-lg">\s*<button class="px-space-sm py-1 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-semibold transition-all shadow-sm" type="button">Log Scale</button>\s*<button class="px-space-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-all" type="button">Linear</button>\s*</div>',
