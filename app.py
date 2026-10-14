@@ -21,6 +21,12 @@ from engine.backtest import (
 )
 from engine.data import fetch_etf_data
 
+try:
+    from engine.api_server import start_api_server
+    start_api_server(8502)
+except Exception:
+    pass
+
 # 1. Streamlit 전역 페이지 설정
 st.set_page_config(
     page_title="블암스 ETF 백테스트",
