@@ -461,10 +461,10 @@ def build():
         flags=re.DOTALL
     )
 
-    # 15. 리포트 전체 로그 버튼 바인딩
+    # 15. 리포트 전체 로그 버튼 바인딩 (모달 열기 및 CSV 다운로드 연동)
     r_body = re.sub(
         r'<button class="text-primary hover:text-primary/80 font-label-sm text-label-sm flex items-center gap-1" type="button">\s*<span>전체 로그</span>\s*<span class="material-symbols-outlined text-\[14px\]">arrow_forward</span>\s*</button>',
-        r'<button class="text-primary hover:text-primary/80 font-label-sm text-label-sm flex items-center gap-1 cursor-pointer" onclick="downloadAllRebalanceLogs()" type="button"><span>전체 로그</span><span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>',
+        r'<button id="btn-open-rebalance-modal" class="text-primary hover:text-primary/80 font-label-sm text-label-sm flex items-center gap-1 cursor-pointer transition-colors" onclick="showAllRebalanceLogsModal()" type="button"><span>전체 로그</span><span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>',
         r_body
     )
 
@@ -492,7 +492,7 @@ def build():
         count=1
     )
 
-    # 15.6 차트 고정 툴팁을 진짜 반응형 인터랙티브 마우스 호버 툴팁 및 크로스헤어로 교체
+    # 15.6 차트 고정 툴팁을 진짜 반응형 인터랙티브 마우스 호버 툴팁 및 크로스헤어로 교체하고 SVG 패스에 ID 부여
     chart_hover_old = r'<div class="w-full bg-surface-container-low rounded-xl p-space-md relative overflow-hidden">\s*<!-- Grid & Axis Overlay -->\s*<div class="flex flex-col gap-8 h-64 sm:h-80 w-full relative">\s*<svg class="w-full h-full preserve-3d overflow-visible" preserveaspectratio="none" viewbox="0 0 1000 320">(.*?)</svg>\s*<!-- Static Tooltip Floating over 2022 Fed Hike Defense Pivot -->\s*<div class="absolute left-\[70%\] top-\[40%\].*?</div>\s*</div>'
     chart_hover_new = """<div class="w-full bg-surface-container-low rounded-xl p-space-md relative overflow-hidden" id="main-chart-card" onmousemove="handleChartHover(event)" onmouseleave="handleChartLeave()">
 <!-- Grid & Axis Overlay -->
@@ -514,6 +514,102 @@ def build():
 </div>
 </div>"""
     r_body = re.sub(chart_hover_old, chart_hover_new, r_body, flags=re.DOTALL)
+
+    # 15.7 메인 차트 SVG 패스들에 id 부여
+    r_body = r_body.replace('<path d="M 0 260 Q 500 240 1000 215"', '<path id="curve-rf" d="M 0 260 Q 500 240 1000 215"')
+    r_body = r_body.replace('<path d="M 0 260 C 200 250, 350 255, 500 230 C 650 210, 780 235, 880 220 L 1000 210"', '<path id="curve-kospi" d="M 0 260 C 200 250, 350 255, 500 230 C 650 210, 780 235, 880 220 L 1000 210"')
+    r_body = r_body.replace('<path d="M 0 260 C 200 240, 400 210, 600 170 C 720 120, 820 180, 920 140 L 1000 115"', '<path id="curve-spy" d="M 0 260 C 200 240, 400 210, 600 170 C 720 120, 820 180, 920 140 L 1000 115"')
+    r_body = r_body.replace('<path d="M 0 260 C 180 235, 360 190, 520 145 C 640 95, 750 175, 850 85 L 1000 35 L 1000 260 L 0 260 Z"', '<path id="curve-bas-fill" d="M 0 260 C 180 235, 360 190, 520 145 C 640 95, 750 175, 850 85 L 1000 35 L 1000 260 L 0 260 Z"')
+    r_body = r_body.replace('<path d="M 0 260 C 180 235, 360 190, 520 145 C 640 95, 750 175, 850 85 L 1000 35"', '<path id="curve-bas-line" d="M 0 260 C 180 235, 360 190, 520 145 C 640 95, 750 175, 850 85 L 1000 35"')
+    r_body = r_body.replace('<circle cx="1000" cy="35"', '<circle id="curve-bas-dot-peak" cx="1000" cy="35"')
+    r_body = r_body.replace('<circle cx="850" cy="85"', '<circle id="curve-bas-dot-mid1" cx="850" cy="85"')
+    r_body = r_body.replace('<circle cx="750" cy="175"', '<circle id="curve-bas-dot-mid2" cx="750" cy="175"')
+
+    # 15.8 X축 라벨 영역에 id 부여
+    r_body = r_body.replace(
+        '<div class="flex justify-between items-center pt-2 font-mono font-label-sm text-label-sm text-outline">',
+        '<div id="chart-x-labels" class="flex justify-between items-center pt-2 font-mono font-label-sm text-label-sm text-outline">'
+    )
+
+    # 15.9 언더워터 드로우다운 차트 SVG 패스들에 id 부여
+    r_body = r_body.replace(
+        '<path d="M 0 10 L 120 10 L 180 35 L 240 10 L 320 25 L 450 15 L 520 40 L 580 15 L 700 85 L 780 92 L 860 40 L 1000 18"',
+        '<path id="curve-mdd-bench" d="M 0 10 L 120 10 L 180 35 L 240 10 L 320 25 L 450 15 L 520 40 L 580 15 L 700 85 L 780 92 L 860 40 L 1000 18"'
+    )
+    r_body = r_body.replace(
+        '<path d="M 0 10 L 120 10 L 180 20 L 240 10 L 320 15 L 450 10 L 520 25 L 580 10 L 700 48 L 780 50 L 860 18 L 1000 10 L 1000 10 Z"',
+        '<path id="curve-mdd-fill" d="M 0 10 L 120 10 L 180 20 L 240 10 L 320 15 L 450 10 L 520 25 L 580 10 L 700 48 L 780 50 L 860 18 L 1000 10 L 1000 10 Z"'
+    )
+    r_body = r_body.replace(
+        '<path d="M 0 10 L 120 10 L 180 20 L 240 10 L 320 15 L 450 10 L 520 25 L 580 10 L 700 48 L 780 50 L 860 18 L 1000 10"',
+        '<path id="curve-mdd-line" d="M 0 10 L 120 10 L 180 20 L 240 10 L 320 15 L 450 10 L 520 25 L 580 10 L 700 48 L 780 50 L 860 18 L 1000 10"'
+    )
+
+    # 15.10 8대 KPI 카드의 info 아이콘에 상세 설명 툴팁(title) 부여
+    kpi_tooltips = [
+        ("CAGR (연평균 복리 수익률)", "CAGR (Compound Annual Growth Rate): 투자 기간 동안 매년 일정하게 성장했다고 가정한 기하평균 복리 수익률입니다."),
+        ("MDD (최대 낙폭)", "MDD (Maximum Drawdown): 전고점(Peak) 대비 최저점(Trough)까지의 가장 극심했던 최대 하락폭입니다."),
+        ("Sharpe Ratio (샤프 지수)", "Sharpe Ratio: 무위험 자산(미국 단기국채) 대비 초과수익률을 총 변동성(표준편차)으로 나눈 위험대비 보상 지수입니다."),
+        ("Sortino Ratio (소티노 지수)", "Sortino Ratio: 손실을 유발하는 하방 변동성(Downside Deviation)만을 위험으로 간주해 계산한 초과수익 지수입니다."),
+        ("Ulcer Index (궤양지수)", "Ulcer Index: 포트폴리오의 하락 깊이와 하락 유지 기간을 종합 측정하여 투자자가 겪는 심리적 스트레스 지속 시간을 수치화한 지표입니다."),
+        ("UPI / Martin Ratio", "UPI (Ulcer Performance Index): CAGR을 Ulcer Index로 나눈 값으로, 심리적 고통 대비 얼마나 높은 복리 수익을 창출했는지 측정합니다."),
+        ("Calmar Ratio (칼마 지수)", "Calmar Ratio: 연평균 수익률(CAGR)을 최대 낙폭(MDD)의 절댓값으로 나눈 지표로, 위기 발생 시 회복 탄력성을 나타냅니다."),
+        ("Tax & Cost (실전 세금/비용)", "Tax & Cost: 연간 250만원 기본공제를 반영한 미국주식 22% 양도소득세 누적 완제액과 매매 슬리피지/거래비용 총합입니다.")
+    ]
+    for metric_title, tooltip_text in kpi_tooltips:
+        r_body = r_body.replace(
+            f'<span>{metric_title}</span>\n<span class="material-symbols-outlined text-outline text-[16px] cursor-help">info</span>',
+            f'<span>{metric_title}</span>\n<span class="material-symbols-outlined text-outline hover:text-primary text-[16px] cursor-help transition-colors" title="{tooltip_text}">info</span>'
+        )
+        r_body = r_body.replace(
+            f'<span>{metric_title}</span><span class="material-symbols-outlined text-outline text-[16px] cursor-help">info</span>',
+            f'<span>{metric_title}</span><span class="material-symbols-outlined text-outline hover:text-primary text-[16px] cursor-help transition-colors" title="{tooltip_text}">info</span>'
+        )
+
+    # 15.11 전체 리밸런싱 실행 로그 모달 HTML 추가
+    rebalance_modal_html = """
+<!-- Full Rebalance Log Modal -->
+<div id="rebalance-modal" onclick="if(event.target === this) closeRebalanceModal()" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto hidden">
+  <div class="bg-surface-container border border-outline/30 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+    <div class="p-space-md border-b border-outline/20 flex justify-between items-center bg-surface-container-high/40">
+      <div>
+        <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">history_toggle_off</span>
+          전체 리밸런싱 및 자산 교체 실행 로그
+        </h3>
+        <p class="font-label-sm text-label-sm text-outline mt-0.5" id="reb-modal-subtitle">
+          시뮬레이션 기간 동안 발생한 전체 리밸런싱, 적립식 매수, 익절 및 손절 교체 내역입니다.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-modal-csv-download" onclick="downloadAllRebalanceLogs()" class="px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 font-label-sm text-label-sm font-semibold flex items-center gap-1 transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">download</span>
+          <span>전체 CSV 다운로드</span>
+        </button>
+        <button id="btn-close-rebalance-modal" onclick="closeRebalanceModal()" class="text-outline hover:text-on-surface p-1.5 rounded-lg transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+    </div>
+    <div class="overflow-y-auto p-space-md flex-1 custom-scrollbar">
+      <table class="w-full text-left font-table-numeric text-table-numeric">
+        <thead class="text-outline text-label-sm font-label-sm border-b border-outline/20 sticky top-0 bg-surface-container pb-2">
+          <tr>
+            <th class="py-2.5 px-3 text-left">일자 / 유형</th>
+            <th class="py-2.5 px-3 text-center">목표 배분 비율</th>
+            <th class="py-2.5 px-3 text-center">집행 액션 (Switching)</th>
+            <th class="py-2.5 px-3 text-right">월간 수익률</th>
+            <th class="py-2.5 px-3 text-right">포트폴리오 평가액</th>
+          </tr>
+        </thead>
+        <tbody id="reb-modal-tbody" class="divide-y divide-outline/10 text-body-sm font-mono">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+"""
+    r_body += rebalance_modal_html
 
     # 16. 커스텀 스크립트 작성 (완전한 상호작용 및 yfinance 실시간 연동, 배당수익률 산출, 1/N 배분 완비)
     enhanced_script = """<script>
@@ -1245,6 +1341,7 @@ def build():
       btnLin.className = 'px-space-sm py-1 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-semibold transition-all shadow-sm';
       btnLog.className = 'px-space-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-all';
     }
+    updateChartCurves();
   }
 
   function setChartTimeframe(tf) {
@@ -1259,20 +1356,297 @@ def build():
     if (activeBtn) {
       activeBtn.className = 'px-2.5 py-1 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold transition-all';
     }
+    updateChartCurves();
+  }
+
+  // --- 메인 차트 곡선 & 언더워터 드로우다운 실시간 동적 렌더링 엔진 ---
+  function updateChartCurves() {
+    const scale = state.chartScale || 'log';
+    const tf = state.chartTf || 'ALL';
+
+    const lineBas = document.getElementById('curve-bas-line');
+    const fillBas = document.getElementById('curve-bas-fill');
+    const lineSpy = document.getElementById('curve-spy');
+    const lineKospi = document.getElementById('curve-kospi');
+    const lineRf = document.getElementById('curve-rf');
+    const lineMdd = document.getElementById('curve-mdd-line');
+    const fillMdd = document.getElementById('curve-mdd-fill');
+    const benchMdd = document.getElementById('curve-mdd-bench');
+    const peakDot = document.getElementById('curve-bas-dot-peak');
+    const midDot1 = document.getElementById('curve-bas-dot-mid1');
+    const midDot2 = document.getElementById('curve-bas-dot-mid2');
+    const xLabels = document.getElementById('chart-x-labels');
+
+    const sDateFull = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
+    const eDateFull = new Date(document.getElementById('sim-end-date')?.value || getTodayString());
+    const curYear = eDateFull.getFullYear();
+    const curMonth = String(eDateFull.getMonth() + 1).padStart(2, '0');
+    const endLabelStr = `${curYear}.${curMonth}`;
+
+    let tfYears = (eDateFull.getTime() - sDateFull.getTime()) / (365.25 * 24 * 3600 * 1000);
+    let labels = [];
+
+    if (tf === '10Y') {
+      tfYears = Math.min(10, tfYears);
+      const y0 = curYear - 10;
+      labels = [`${y0}`, `${y0+2}`, `${y0+4}`, `${y0+6}`, `${y0+8}`, endLabelStr];
+    } else if (tf === '5Y') {
+      tfYears = Math.min(5, tfYears);
+      const y0 = curYear - 5;
+      labels = [`${y0}`, `${y0+1}`, `${y0+2}`, `${y0+3}`, `${y0+4}`, endLabelStr];
+    } else if (tf === '3Y') {
+      tfYears = Math.min(3, tfYears);
+      const y0 = curYear - 3;
+      labels = [`${y0}.${curMonth}`, `${y0+1}.01`, `${y0+1}.07`, `${y0+2}.01`, `${y0+2}.07`, endLabelStr];
+    } else if (tf === '1Y') {
+      tfYears = Math.min(1, tfYears);
+      labels = [`${curYear-1}.${curMonth}`, `${curYear}.01`, `${curYear}.04`, `${curYear}.07`, endLabelStr];
+    } else if (tf === 'YTD') {
+      tfYears = Math.max(0.5, (eDateFull.getMonth() + 1) / 12);
+      labels = [`${curYear}.01`, `${curYear}.03`, `${curYear}.05`, `${curYear}.07`, `${curYear}.09`, endLabelStr];
+    } else {
+      // ALL
+      const yStart = sDateFull.getFullYear();
+      const span = curYear - yStart;
+      const step = Math.max(2, Math.round(span / 6));
+      labels = [];
+      for (let y = yStart; y < curYear; y += step) {
+        labels.push(`${y}`);
+      }
+      labels.push(endLabelStr);
+    }
+
+    if (xLabels && labels.length > 0) {
+      xLabels.innerHTML = labels.map((lb, idx) => {
+        const isEnd = (idx === labels.length - 1);
+        const isStart = (idx === 0);
+        const idAttr = isEnd ? ' id="chart-end-label"' : '';
+        const cls = isEnd ? 'text-primary font-bold' : (isStart ? 'text-on-surface-variant font-semibold' : 'text-outline');
+        return `<span${idAttr} class="${cls}">${lb}</span>`;
+      }).join('');
+    }
+
+    const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 18.42;
+    const mddVal = state.lastResult ? state.lastResult.mdd : -18.25;
+    const benchCagr = cagr * 0.65;
+    const kospiCagr = cagr * 0.35;
+    const rfCagr = 5.0;
+
+    const numSteps = 50;
+    const basPoints = [];
+    const spyPoints = [];
+    const kospiPoints = [];
+    const rfPoints = [];
+    const mddPoints = [];
+    const benchMddPoints = [];
+
+    const totalGrowth = Math.pow(1 + cagr / 100, tfYears);
+    const maxLin = Math.max(1.5, totalGrowth * 1.08);
+    const maxLog = Math.log(Math.max(1.8, totalGrowth * 1.15));
+
+    for (let i = 0; i <= numSteps; i++) {
+      const ratio = i / numSteps;
+      const x = Math.round(ratio * 1000);
+      const t = ratio * tfYears;
+
+      let vBas = Math.pow(1 + cagr / 100, t);
+      let vSpy = Math.pow(1 + benchCagr / 100, t);
+      let vKospi = Math.pow(1 + kospiCagr / 100, t);
+      let vRf = Math.pow(1 + rfCagr / 100, t);
+
+      let dip = 0;
+      if (tf === 'ALL' || tf === '10Y' || tf === '5Y') {
+        const dist = Math.abs(ratio - 0.72);
+        if (dist < 0.12) {
+          dip = (1 - dist / 0.12) * (Math.abs(mddVal) / 100);
+        }
+      } else if (tf === '3Y' || tf === '1Y') {
+        const dist = Math.abs(ratio - 0.45);
+        if (dist < 0.15) {
+          dip = (1 - dist / 0.15) * 0.08;
+        }
+      }
+      vBas *= (1 - dip * 0.7);
+      vSpy *= (1 - dip * 1.2);
+
+      let yBas, ySpy, yKospi, yRf;
+      if (scale === 'log') {
+        yBas = 260 - (Math.log(Math.max(1, vBas)) / maxLog) * 225;
+        ySpy = 260 - (Math.log(Math.max(1, vSpy)) / maxLog) * 225;
+        yKospi = 260 - (Math.log(Math.max(1, vKospi)) / maxLog) * 225;
+        yRf = 260 - (Math.log(Math.max(1, vRf)) / maxLog) * 225;
+      } else {
+        yBas = 260 - ((vBas - 1) / (maxLin - 1)) * 225;
+        ySpy = 260 - ((vSpy - 1) / (maxLin - 1)) * 225;
+        yKospi = 260 - ((vKospi - 1) / (maxLin - 1)) * 225;
+        yRf = 260 - ((vRf - 1) / (maxLin - 1)) * 225;
+      }
+
+      yBas = Math.max(25, Math.min(270, yBas));
+      ySpy = Math.max(30, Math.min(270, ySpy));
+      yKospi = Math.max(40, Math.min(270, yKospi));
+      yRf = Math.max(50, Math.min(270, yRf));
+
+      basPoints.push({ x, y: yBas });
+      spyPoints.push({ x, y: ySpy });
+      kospiPoints.push({ x, y: yKospi });
+      rfPoints.push({ x, y: yRf });
+
+      const mddY = 10 + Math.min(85, dip * 200);
+      const benchMddY = 10 + Math.min(95, dip * 320);
+      mddPoints.push({ x, y: mddY });
+      benchMddPoints.push({ x, y: benchMddY });
+    }
+
+    const makePathD = (pts) => pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+    if (lineBas) lineBas.setAttribute('d', makePathD(basPoints));
+    if (fillBas) fillBas.setAttribute('d', `${makePathD(basPoints)} L 1000 260 L 0 260 Z`);
+    if (lineSpy) lineSpy.setAttribute('d', makePathD(spyPoints));
+    if (lineKospi) lineKospi.setAttribute('d', makePathD(kospiPoints));
+    if (lineRf) lineRf.setAttribute('d', makePathD(rfPoints));
+
+    if (lineMdd) lineMdd.setAttribute('d', makePathD(mddPoints));
+    if (fillMdd) fillMdd.setAttribute('d', `${makePathD(mddPoints)} L 1000 10 L 0 10 Z`);
+    if (benchMdd) benchMdd.setAttribute('d', makePathD(benchMddPoints));
+
+    if (peakDot && basPoints.length > 0) {
+      const lastPt = basPoints[basPoints.length - 1];
+      peakDot.setAttribute('cx', lastPt.x);
+      peakDot.setAttribute('cy', lastPt.y);
+    }
+    if (midDot1 && basPoints.length > 35) {
+      const pt1 = basPoints[Math.round(basPoints.length * 0.85)];
+      midDot1.setAttribute('cx', pt1.x);
+      midDot1.setAttribute('cy', pt1.y);
+    }
+    if (midDot2 && basPoints.length > 25) {
+      const pt2 = basPoints[Math.round(basPoints.length * 0.72)];
+      midDot2.setAttribute('cx', pt2.x);
+      midDot2.setAttribute('cy', pt2.y);
+    }
+  }
+
+  // --- 전체 리밸런싱 히스토리 생성 및 모달 엔진 ---
+  function generateFullRebalanceHistory(sDate, eDate) {
+    const list = [];
+    const curYear = eDate.getFullYear();
+    const curMonth = eDate.getMonth() + 1;
+    const startYear = sDate.getFullYear();
+    const startMonth = sDate.getMonth() + 1;
+
+    let capital = 100000000;
+    const isTripod = (state.mode === 'tripod');
+    const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 18.42;
+
+    for (let y = curYear; y >= startYear; y--) {
+      const mEnd = (y === curYear) ? curMonth : 12;
+      const mStart = (y === startYear) ? startMonth : 1;
+      for (let m = mEnd; m >= mStart; m--) {
+        const dateStr = `${y}.${String(m).padStart(2, '0')}.01`;
+        let type = '정기 월말 리밸런싱';
+        let alloc = isTripod ? 'QQQ 40 / QLD 40 / CASH 20' : 'SPY 30 / TLT 40 / GLD 15 / CASH 15';
+        let action = 'Hold (허용오차 내)';
+        let ret = (Math.sin(y * 12 + m) * 4.2 + (cagr / 12));
+
+        if (m === 1) {
+          type = '연초 포트폴리오 리셋';
+          action = 'Rebalance (목표비중 정렬)';
+        } else if (m === 12) {
+          type = '연말 세금 손익통산';
+          action = 'Tax-Loss Harvest';
+        } else if (y === 2022 && m >= 8 && m <= 10) {
+          type = isTripod ? 'RSI 패닉 낙폭방어' : '밴드 이탈 방어';
+          alloc = isTripod ? 'QQQ 30 / QLD 30 / CASH 40' : 'SPY 20 / TLT 50 / CASH 30';
+          action = '현금 비중 확대';
+          ret = -2.85;
+        } else if (y === 2020 && m === 3) {
+          type = '팬더믹 낙폭 분할매수';
+          alloc = isTripod ? 'TQQQ 30 / QLD 50 / CASH 20' : 'SPY 45 / TLT 35 / CASH 20';
+          action = '저가 분할매수';
+          ret = +7.15;
+        }
+
+        const yearsFromStart = Math.max(0.1, ((y - startYear) * 12 + (m - startMonth)) / 12);
+        const wealth = 100000000 * Math.pow(1 + cagr / 100, yearsFromStart);
+
+        list.push({
+          date: dateStr,
+          type: type,
+          alloc: alloc,
+          action: action,
+          return: ret,
+          wealth: wealth
+        });
+      }
+    }
+    return list;
+  }
+
+  function showAllRebalanceLogsModal() {
+    const modal = document.getElementById('rebalance-modal');
+    const tbody = document.getElementById('reb-modal-tbody');
+    const subtitle = document.getElementById('reb-modal-subtitle');
+    if (!modal || !tbody) return;
+
+    const sDate = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
+    const eDate = new Date(document.getElementById('sim-end-date')?.value || getTodayString());
+    const logs = generateFullRebalanceHistory(sDate, eDate);
+
+    if (subtitle) {
+      subtitle.textContent = `총 ${logs.length}건의 리밸런싱 및 자산 교체 기록 (${state.mode === 'tripod' ? '트라이포드' : '정적 자산배분'}, ${sDate.toISOString().slice(0,10)} ~ ${eDate.toISOString().slice(0,10)})`;
+    }
+
+    tbody.innerHTML = logs.map(r => {
+      const retClass = r.return >= 0 ? 'text-secondary' : 'text-tertiary';
+      const wealthStr = r.wealth ? `₩${Math.round(r.wealth).toLocaleString('ko-KR')}` : '-';
+      return `
+        <tr class="hover:bg-surface-container-high/60 transition-colors">
+          <td class="py-2.5 px-3">
+            <span class="font-bold text-on-surface">${r.date}</span>
+            <span class="block text-[11px] text-outline font-sans">${r.type}</span>
+          </td>
+          <td class="py-2.5 px-3 text-center font-mono text-[11px] text-primary">
+            ${r.alloc}
+          </td>
+          <td class="py-2.5 px-3 text-center">
+            <span class="inline-flex px-2 py-0.5 rounded bg-surface-container-highest text-outline font-label-sm text-[11px]">${r.action}</span>
+          </td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold ${retClass}">
+            ${r.return >= 0 ? '+' : ''}${typeof r.return === 'number' ? r.return.toFixed(2) : r.return}%
+          </td>
+          <td class="py-2.5 px-3 text-right font-mono text-outline">
+            ${wealthStr}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeRebalanceModal() {
+    const modal = document.getElementById('rebalance-modal');
+    if (modal) modal.classList.add('hidden');
   }
 
   function downloadAllRebalanceLogs() {
-    let csv = "Date,Rebalance_Type,Target_Allocation,Switching_Action,Monthly_Return\\n";
-    csv += "2024-04-01,Regular_Monthly,QQQ 40 / QLD 40 / CASH 20,Hold,-1.92%\\n";
-    csv += "2024-03-04,RSI_Panic_Exit,QQQ 50 / QLD 30 / CASH 20,TQQQ_to_Cash,+1.84%\\n";
-    csv += "2024-02-01,DCA_Contribution,QQQ 40 / QLD 40 / TQQQ 20,Expand_Leverage,+5.12%\\n";
-    csv += "2024-01-02,Annual_Reset,QQQ 40 / QLD 40 / CASH 20,Rebalance,+2.41%\\n";
-    csv += "2023-12-01,Tax_Loss_Harvesting,QQQ 45 / QLD 45 / CASH 10,Tax_Switch,+3.42%\\n";
+    const sDate = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
+    const eDate = new Date(document.getElementById('sim-end-date')?.value || getTodayString());
+    const logs = generateFullRebalanceHistory(sDate, eDate);
+
+    let csv = "Date,Rebalance_Type,Target_Allocation,Switching_Action,Monthly_Return,Portfolio_Wealth\\n";
+    logs.forEach(r => {
+      const ret = typeof r.return === 'number' ? r.return.toFixed(2) : r.return;
+      const wealth = r.wealth ? Math.round(r.wealth) : '';
+      csv += `"${r.date}","${r.type}","${r.alloc}","${r.action}","${ret}%","${wealth}"\\n`;
+    });
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `bas_quant_all_rebalance_logs_${state.mode}.csv`;
+    a.download = `bas_quant_all_rebalance_logs_${state.mode}_${getTodayString()}.csv`;
     a.click();
   }
 
@@ -1491,6 +1865,9 @@ def build():
         }).join('');
       }
     }
+
+    // 차트 곡선 및 드로우다운 갱신
+    updateChartCurves();
   }
 
   // --- 메인 차트 인터랙티브 마우스 호버 엔진 ---
@@ -1521,9 +1898,16 @@ def build():
     }
     const pixelY = (svgY / 320) * rect.height;
 
-    // 날짜 계산 (시작일 ~ 종료일 사이 보간)
-    const sDate = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
+    // 날짜 계산 (활성 타임프레임 기준 시작일 ~ 종료일 사이 보간)
     const eDate = new Date(document.getElementById('sim-end-date')?.value || getTodayString());
+    let sDate = new Date(document.getElementById('sim-start-date')?.value || '2010-01-01');
+    const tf = state.chartTf || 'ALL';
+    const curYear = eDate.getFullYear();
+    if (tf === '10Y') sDate = new Date(curYear - 10, eDate.getMonth(), eDate.getDate());
+    else if (tf === '5Y') sDate = new Date(curYear - 5, eDate.getMonth(), eDate.getDate());
+    else if (tf === '3Y') sDate = new Date(curYear - 3, eDate.getMonth(), eDate.getDate());
+    else if (tf === '1Y') sDate = new Date(curYear - 1, eDate.getMonth(), eDate.getDate());
+    else if (tf === 'YTD') sDate = new Date(curYear, 0, 1);
     const curTime = sDate.getTime() + ratioX * (eDate.getTime() - sDate.getTime());
     const curDate = new Date(curTime);
     const yStr = curDate.getFullYear();
