@@ -428,6 +428,7 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
                     tax_paid = float(r.get("Tax_Paid", 0.0))
                     port_val = float(r.get("Portfolio_Value", 0.0))
                     
+                    action_str = f"비용: ₩{round(fee_paid + tax_paid):,}" if (fee_paid + tax_paid) > 0 else "비중 조정 완료"
                     reason_val = str(r.get("Reason", ""))
                     if "Tax" in reason_val:
                         reason_str = "연말 세금 정산"
