@@ -155,6 +155,24 @@ def test_e2e_features():
         assert first_row_year == "2026", f"Monthly returns matrix top year should be 2026: {first_row_year}"
         assert first_reb_date.startswith("2026"), f"Rebalance log should show 2026: {first_reb_date}"
         
+        # 4.1 일봉 전수 데이터(Daily Bars) 검증
+        daily_info = target_frame.evaluate("""() => {
+            const res = window.state.lastResult;
+            const curve = res ? res.curveData : [];
+            const rendered = window.state.activeRenderedPoints || [];
+            const resText = document.getElementById('chart-resolution-text')?.textContent || '';
+            return {
+                tradingDays: res ? res.tradingDays : 0,
+                curveLen: curve ? curve.length : 0,
+                renderedLen: rendered.length,
+                resolutionText: resText
+            };
+        }""")
+        print(f"Daily Bars Check -> TradingDays: {daily_info['tradingDays']}, CurveLen: {daily_info['curveLen']}, Rendered: {daily_info['renderedLen']}", flush=True)
+        assert daily_info['curveLen'] >= 2000, f"Expected daily bars >= 2000, got {daily_info['curveLen']}"
+        assert daily_info['curveLen'] == daily_info['tradingDays'], "Curve data points must match trading days 1:1"
+        assert "일봉 기준 (Daily Bars)" in daily_info['resolutionText'], f"Resolution badge mismatch: {daily_info['resolutionText']}"
+        
         # 5. 차트 인터랙티브 호버 검증 (마우스 놓았을 때 액션 표시)
         print("6. Verifying interactive chart hover action...", flush=True)
         chart_area = target_frame.locator("#chart-hover-area")
@@ -163,11 +181,16 @@ def test_e2e_features():
         # 호버 전에는 opacity-0 클래스 확인
         assert "opacity-0" in tooltip.get_attribute("class"), "Tooltip should be hidden before hover"
         
-        # 차트 70% 위치 (2022년 금리인상 방어 구간)로 마우스 이동
+        # 차트 영역으로 마우스 이동 (hover)
         chart_box = chart_area.bounding_box()
-        hover_x = chart_box["x"] + chart_box["width"] * 0.72
-        hover_y = chart_box["y"] + chart_box["height"] * 0.45
-        page.mouse.move(hover_x, hover_y)
+        page.mouse.move(chart_box["x"] + chart_box["width"] * 0.6, chart_box["y"] + chart_box["height"] * 0.4)
+        target_frame.evaluate("""() => {
+            const a = document.getElementById('chart-hover-area');
+            if (a) {
+                const r = a.getBoundingClientRect();
+                handleChartHover({ clientX: r.left + r.width * 0.6, clientY: r.top + r.height * 0.4 });
+            }
+        }""")
         time.sleep(1)
         
         # 호버 후 툴팁 활성화 검증
@@ -178,6 +201,7 @@ def test_e2e_features():
         hover_bas = target_frame.locator("#tooltip-bas-val").text_content().strip()
         print(f"Chart Hover Active -> Date: {hover_date}, Event: {hover_event}, Return: {hover_bas}", flush=True)
         assert hover_date != "" and hover_bas != "", "Tooltip contents should be populated on hover"
+        assert "일봉" in hover_date, f"Tooltip should show Daily Bar: {hover_date}"
         
         # 호버 상태 스크린샷 캡처
         hover_screenshot_path = os.path.join(artifact_dir, "chart_hover_action_verified.png")

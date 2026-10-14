@@ -542,6 +542,18 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         flags=re.DOTALL
     )
 
+    # 14.5 차트 헤더 배지: 일봉 기준 (Daily Bars) 실시간 전수 연산 배지 부여
+    r_body = re.sub(
+        r'<span class="px-space-xs py-0.5 rounded bg-surface-container-highest text-primary font-label-sm text-label-sm">14-Year Time Series</span>',
+        r'<span id="chart-resolution-badge" class="px-2 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 font-label-sm text-label-sm font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span id="chart-resolution-text">일봉 기준 (Daily Bars) • 실시간 정밀 연산</span></span>',
+        r_body
+    )
+    r_body = re.sub(
+        r'<p class="font-body-sm text-body-sm text-outline">초기 거치 1억 원 \+ 매월 100만 원 분할 적립식 시뮬레이션 결과</p>',
+        r'<p class="font-body-sm text-body-sm text-outline" id="chart-sub-desc">초기 거치 1억 원 + 매월 100만 원 분할 적립식 시뮬레이션 결과 (거래일별 일봉 정밀 연산)</p>',
+        r_body
+    )
+
     # 15. 리포트 전체 로그 버튼 바인딩 (모달 열기 및 CSV 다운로드 연동)
     r_body = re.sub(
         r'<button class="text-primary hover:text-primary/80 font-label-sm text-label-sm flex items-center gap-1" type="button">\s*<span>전체 로그</span>\s*<span class="material-symbols-outlined text-\[14px\]">arrow_forward</span>\s*</button>',
@@ -575,9 +587,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
     # 15.6 차트 고정 툴팁을 진짜 반응형 인터랙티브 마우스 호버 툴팁 및 크로스헤어로 교체하고 SVG 패스에 ID 부여
     chart_hover_old = r'<div class="w-full bg-surface-container-low rounded-xl p-space-md relative overflow-hidden">\s*<!-- Grid & Axis Overlay -->\s*<div class="flex flex-col gap-8 h-64 sm:h-80 w-full relative">\s*<svg class="w-full h-full preserve-3d overflow-visible" preserveaspectratio="none" viewbox="0 0 1000 320">(.*?)</svg>\s*<!-- Static Tooltip Floating over 2022 Fed Hike Defense Pivot -->\s*<div class="absolute left-\[70%\] top-\[40%\].*?</div>\s*</div>'
-    chart_hover_new = """<div class="w-full bg-surface-container-low rounded-xl p-space-md relative overflow-hidden" id="main-chart-card" onmousemove="handleChartHover(event)" onmouseleave="handleChartLeave()">
+    chart_hover_new = """<div class="w-full bg-surface-container-low rounded-xl p-space-md relative overflow-hidden" id="main-chart-card">
 <!-- Grid & Axis Overlay -->
-<div class="flex flex-col gap-8 h-64 sm:h-80 w-full relative cursor-crosshair" id="chart-hover-area">
+<div class="flex flex-col gap-8 h-64 sm:h-80 w-full relative cursor-crosshair" id="chart-hover-area" onmousemove="handleChartHover(event)" onmouseleave="handleChartLeave()">
 <svg class="w-full h-full preserve-3d overflow-visible" id="main-chart-svg" preserveaspectratio="none" viewbox="0 0 1000 320">\\1
 <!-- Interactive Crosshair & Dot -->
 <line id="chart-crosshair-line" x1="-100" x2="-100" y1="0" y2="320" stroke="#478fff" stroke-dasharray="3 3" stroke-width="1.5" opacity="0"></line>
@@ -945,6 +957,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     },
     taxEnabled: true
   };
+  window.state = state;
 
   function switchNav(tab) {
     const vBuilder = document.getElementById('view-builder');
@@ -2540,6 +2553,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
       }
     }
 
+    // 차트 일봉 해상도 및 거래일 수 배지 동적 갱신
+    const resText = document.getElementById('chart-resolution-text');
+    if (resText) {
+      const barsCount = (data.curveData && data.curveData.length) ? data.curveData.length : (data.tradingDays || 4221);
+      resText.textContent = `일봉 기준 (Daily Bars) • ${barsCount.toLocaleString('ko-KR')} 거래일 전수 연산`;
+    }
+
     // 차트 끝 날짜 라벨 동적 갱신
     const chartEndEl = document.getElementById('chart-end-label');
     if (chartEndEl) {
@@ -2608,10 +2628,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     if (!area || !tooltip) return;
 
     const rect = area.getBoundingClientRect();
-    const clientX = e.clientX;
-    const clientY = e.clientY;
+    const clientX = (e && e.clientX !== undefined) ? e.clientX : (rect.left + rect.width * 0.5);
+    const clientY = (e && e.clientY !== undefined) ? e.clientY : (rect.top + rect.height * 0.5);
 
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+    if (clientX < rect.left - 20 || clientX > rect.right + 20 || clientY < rect.top - 20 || clientY > rect.bottom + 20) {
       handleChartLeave();
       return;
     }
@@ -2625,20 +2645,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     let yStr = 2024;
     let curDate = new Date();
     let svgY = 260 - (ratioX * 225);
+    let curIdx = -1;
 
     const rendered = state.activeRenderedPoints;
     const basPts = state.activeBasPoints;
     if (rendered && rendered.length > 5) {
-      const idx = Math.min(rendered.length - 1, Math.round(ratioX * (rendered.length - 1)));
-      const pt = rendered[idx];
+      curIdx = Math.min(rendered.length - 1, Math.round(ratioX * (rendered.length - 1)));
+      const pt = rendered[curIdx];
       dateStr = pt.date.replace(/-/g, '.');
       curReturn = pt.returnPct;
       benchReturn = pt.benchReturnPct;
       curDate = new Date(pt.timestamp || pt.date);
       yStr = curDate.getFullYear();
 
-      if (basPts && basPts[idx]) {
-        svgY = basPts[idx].y;
+      if (basPts && basPts[curIdx]) {
+        svgY = basPts[curIdx].y;
       }
     } else {
       if (ratioX > 0.65 && ratioX < 0.85) {
@@ -2667,21 +2688,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
     const pixelY = (svgY / 320) * rect.height;
 
-    // 특수 시장 이벤트 매핑
-    let eventHeader = `${dateStr} 실시간 퀀트 백테스트 추적`;
+    // 특수 시장 이벤트 매핑 (일봉 정밀 추적)
+    let eventHeader = `${dateStr} 일봉 (Daily Bar)`;
     let eventTitle = state.mode === 'tripod' ? '나스닥 레버리지 트라이포드 운용' : '정적 자산배분 리밸런싱';
 
     if (yStr === 2020 && curDate.getMonth() >= 1 && curDate.getMonth() <= 4) {
-      eventHeader = `${dateStr} COVID-19 CRASH`;
+      eventHeader = `${dateStr} COVID-19 CRASH (일봉)`;
       eventTitle = '팬더믹 낙폭 분할매수 사다리 가동';
     } else if (yStr === 2022 && curDate.getMonth() >= 8 && curDate.getMonth() <= 10) {
-      eventHeader = `${dateStr} FED TIGHTENING`;
+      eventHeader = `${dateStr} FED TIGHTENING (일봉)`;
       eventTitle = '트라이포드 변동성 방어 작동 (현금 비중 확대)';
     } else if (yStr >= 2024) {
-      eventHeader = `${dateStr} AI MOMENTUM RALLY`;
+      eventHeader = `${dateStr} AI MOMENTUM RALLY (일봉)`;
       eventTitle = '신고가(ATH) 돌파 및 복리 극대화';
     } else if (yStr === 2018 && curDate.getMonth() >= 9) {
-      eventHeader = `${dateStr} 금리인상 & 미중 무역분쟁`;
+      eventHeader = `${dateStr} 무역분쟁 & 금리인상 (일봉)`;
       eventTitle = '안전자산(채권/금) 방어 작동';
     }
 
@@ -2692,8 +2713,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
     if (tDate) tDate.textContent = eventHeader;
     if (tTitle) tTitle.textContent = eventTitle;
-    if (tBas) tBas.textContent = `BAS: ${curReturn >= 0 ? '+' : ''}${curReturn.toFixed(1)}%`;
-    if (tBench) tBench.textContent = `SPY: ${benchReturn >= 0 ? '+' : ''}${benchReturn.toFixed(1)}%`;
+    if (tBas) {
+      const ptWealth = (rendered && curIdx >= 0 && rendered[curIdx] && rendered[curIdx].wealth) ? ` (₩${Math.round(rendered[curIdx].wealth / 10000).toLocaleString('ko-KR')}만)` : '';
+      tBas.textContent = `BAS: ${curReturn >= 0 ? '+' : ''}${curReturn.toFixed(2)}%${ptWealth}`;
+    }
+    if (tBench) tBench.textContent = `SPY: ${benchReturn >= 0 ? '+' : ''}${benchReturn.toFixed(2)}%`;
 
     const relativeX = clientX - rect.left;
     tooltip.style.left = `${relativeX}px`;

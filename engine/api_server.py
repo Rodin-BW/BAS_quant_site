@@ -46,6 +46,7 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        print(f"[API SERVER] do_GET received: {self.path}", flush=True)
         parsed = urlparse(self.path)
         if parsed.path in ('/health', '/api/health'):
             self.send_json_response(200, {'status': 'ok', 'service': 'yfinance-backtest-api'})
@@ -380,18 +381,15 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
                         "return": round(float(cagr * 0.08 * (1 if i % 2 == 0 else -0.5)), 2)
                     })
 
-            # 4.3 실제 시계열 차트 데이터 (curveData: ~200포인트 다운샘플링)
+            # 4.3 실제 시계열 차트 데이터 (일봉 전수 계산: Daily Bars)
             dates = pv_series.index
             spy_close = price_df['SPY'] if 'SPY' in price_df.columns else pv_series
             spy_rebased = (spy_close / spy_close.iloc[0]) * capital
             spy_dd = calculate_drawdown(spy_close)
 
-            n_pts = min(200, len(dates))
-            sample_indices = np.linspace(0, len(dates) - 1, n_pts, dtype=int)
-            sample_indices = np.unique(sample_indices)
-
             curve_data = []
-            for idx in sample_indices:
+            len_dates = len(dates)
+            for idx in range(len_dates):
                 dt_obj = dates[idx]
                 p_val = float(pv_series.iloc[idx])
                 s_val = float(spy_rebased.iloc[idx])
@@ -399,7 +397,7 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
                 s_dd = float(spy_dd.iloc[idx] * 100.0)
 
                 # 투자 원금(DCA 고려) 추정
-                elapsed_ratio = (idx / (len(dates) - 1)) if len(dates) > 1 else 0.0
+                elapsed_ratio = (idx / (len_dates - 1)) if len_dates > 1 else 0.0
                 cur_contrib = capital + (total_contributed - capital) * elapsed_ratio
 
                 p_ret = ((p_val / (cur_contrib or 1.0)) - 1.0) * 100.0
