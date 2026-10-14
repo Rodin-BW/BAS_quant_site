@@ -20,15 +20,33 @@ from engine.backtest import (
     calculate_drawdown,
     compute_monthly_returns_matrix,
     run_rebalancing_backtest,
-    run_nasdaq_tripod_backtest
+    run_nasdaq_tripod_backtest,
+    run_canary_backtest,
+    run_momentum_backtest
 )
 
 _server_instance = None
 _server_thread = None
 
+def sanitize_for_json(val):
+    if isinstance(val, dict):
+        return {k: sanitize_for_json(v) for k, v in val.items()}
+    elif isinstance(val, list):
+        return [sanitize_for_json(v) for v in val]
+    elif isinstance(val, (float, np.floating)):
+        if np.isnan(val) or np.isneginf(val) or np.isposinf(val):
+            return 0.0
+        return float(val)
+    elif isinstance(val, (int, np.integer)):
+        return int(val)
+    elif pd.isna(val):
+        return None
+    return val
+
 class BacktestAPIHandler(BaseHTTPRequestHandler):
     def send_json_response(self, code: int, data: dict):
-        payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
+        clean_data = sanitize_for_json(data)
+        payload = json.dumps(clean_data, ensure_ascii=False).encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(payload)))
@@ -169,6 +187,18 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
             weights = {core_t: core_w, base_t: base_w, panic_t: panic_w, buf_t: buf_w}
             tickers = [t for t in [core_t, base_t, panic_t, buf_t] if t != 'CASH']
             alloc_summary = f"{core_t} {int(core_w*100)} / {base_t} {int(base_w*100)} / {buf_t} {int(buf_w*100)}"
+        elif mode == 'dynamic':
+            dyn_conf = req.get('dynamic', {})
+            dyn_model = str(dyn_conf.get('model', 'DAA')).upper()
+            off_assets = [normalize_ticker(t) for t in dyn_conf.get('offensive', ['SPY', 'QQQ', 'IWM', 'VGK', 'EWJ', 'EEM', 'VNQ', 'GLD', 'TLT', 'HYG', 'LQD']) if t]
+            def_assets = [normalize_ticker(t) for t in dyn_conf.get('defensive', ['SHY', 'IEF', 'LQD']) if t]
+            can_assets = [normalize_ticker(t) for t in dyn_conf.get('canary', ['VWO', 'BND']) if t]
+            top_n = int(dyn_conf.get('topN', 2 if dyn_model == 'DAA' else 1))
+            lookback_m = int(dyn_conf.get('lookbackMonths', 6))
+
+            weights = {}
+            tickers = [t for t in list(dict.fromkeys(off_assets + def_assets + can_assets)) if t != 'CASH']
+            alloc_summary = f"{dyn_model} (공격 {len(off_assets)} / 방어 {len(def_assets)} / 카나리아 {len(can_assets)})"
         else:
             raw_assets = req.get('assets', [])
             weights = {}
@@ -277,6 +307,48 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
                         periodic_cash_flow=periodic_cf,
                         dca_freq=dca_freq
                     )
+                elif mode == 'dynamic':
+                    if dyn_model == 'MOMENTUM':
+                        sub_cols = [c for c in tickers if c in price_df.columns]
+                        sub_df = price_df[sub_cols] if sub_cols else price_df
+                        backtest_result = run_momentum_backtest(
+                            price_df=sub_df,
+                            lookback_months=lookback_m,
+                            top_n=top_n,
+                            fee_rate=0.0005,
+                            tax_rate=tax_rate,
+                            tax_deduction=tax_deduction,
+                            initial_capital=capital,
+                            periodic_cash_flow=periodic_cf,
+                            dca_freq=dca_freq
+                        )
+                    else:
+                        valid_off = [c for c in off_assets if c in price_df.columns]
+                        valid_def = [c for c in def_assets if c in price_df.columns]
+                        valid_can = [c for c in can_assets if c in price_df.columns]
+
+                        # 수비 자산이 누락된 경우 안전 Fallback
+                        if not valid_def:
+                            valid_def = ['IEF'] if 'IEF' in price_df.columns else [price_df.columns[0]]
+                        if not valid_off:
+                            valid_off = [c for c in price_df.columns if c not in valid_def] or valid_def
+                        if not valid_can:
+                            valid_can = valid_off[:2]
+
+                        backtest_result = run_canary_backtest(
+                            price_df=price_df,
+                            offensive_assets=valid_off,
+                            defensive_assets=valid_def,
+                            canary_assets=valid_can,
+                            model_type=dyn_model if dyn_model in ['VAA', 'DAA'] else 'DAA',
+                            top_n=top_n,
+                            fee_rate=0.0005,
+                            tax_rate=tax_rate,
+                            tax_deduction=tax_deduction,
+                            initial_capital=capital,
+                            periodic_cash_flow=periodic_cf,
+                            dca_freq=dca_freq
+                        )
                 else:
                     # 정적 자산 배분 백테스트
                     valid_weights = {k: v for k, v in weights.items() if k in price_df.columns}
@@ -352,20 +424,40 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
                 for _, r in reb_df.iloc[::-1].iterrows():
                     dt_val = r.get("Date")
                     dt_str = pd.to_datetime(dt_val).strftime("%Y.%m.%d") if pd.notna(dt_val) else ""
-                    reason_str = str(r.get("Reason", "정기 리밸런싱"))
                     fee_paid = float(r.get("Fee_Paid", 0.0))
                     tax_paid = float(r.get("Tax_Paid", 0.0))
                     port_val = float(r.get("Portfolio_Value", 0.0))
                     
-                    action_str = f"비용: ₩{round(fee_paid + tax_paid):,}" if (fee_paid + tax_paid) > 0 else "비중 조정 완료"
-                    if "Tax" in reason_str:
+                    reason_val = str(r.get("Reason", ""))
+                    if "Tax" in reason_val:
+                        reason_str = "연말 세금 정산"
+                        alloc_item = "과세 계좌 수익 정산"
                         action_str = f"세금 납부 ₩{round(tax_paid):,}"
+                    elif "Canary_Status" in r and pd.notna(r.get("Canary_Status")):
+                        canary_st = str(r.get("Canary_Status", ""))
+                        model_name = str(r.get("Model", "동적"))
+                        reason_str = f"{model_name} {canary_st}"
+                        off_val = r.get('Offensive')
+                        def_val = r.get('Defensive')
+                        off_str = str(off_val) if pd.notna(off_val) and str(off_val) != 'nan' else "-"
+                        def_str = str(def_val) if pd.notna(def_val) and str(def_val) != 'nan' else "-"
+                        alloc_item = f"공격: {off_str} | 방어: {def_str}"
+                    elif "Selected" in r and pd.notna(r.get("Selected")):
+                        reason_str = str(r.get("Reason", "모멘텀 리밸런싱"))
+                        alloc_item = f"보유: {r.get('Selected', '-')}"
+                    else:
+                        reason_str = str(r.get("Reason", "정기 리밸런싱"))
+                        alloc_item = alloc_summary
 
-                    gain_pct = round(float(r.get("Realized_Gain", 0.0) / (port_val or 1.0) * 100.0), 2) if "Realized_Gain" in r else 0.0
+                    gain_raw = r.get("Realized_Gain", 0.0)
+                    gain_val = float(gain_raw) if pd.notna(gain_raw) else 0.0
+                    gain_pct = round((gain_val / (port_val or 1.0)) * 100.0, 2)
+                    if np.isnan(gain_pct) or np.isinf(gain_pct):
+                        gain_pct = 0.0
                     recent_rebalances.append({
                         "date": dt_str,
                         "type": reason_str,
-                        "alloc": alloc_summary,
+                        "alloc": alloc_item,
                         "action": action_str,
                         "return": gain_pct
                     })
@@ -470,7 +562,6 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
 
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
-    allow_reuse_address = True
     daemon_threads = True
 
 def start_api_server(port=8502):

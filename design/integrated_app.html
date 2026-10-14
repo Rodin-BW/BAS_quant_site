@@ -44,17 +44,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
           한국(KRX) &amp; 미국(US) 상장 ETF 자산군 정밀 조합 및 3대 축 나스닥 레버리지 방어 알고리즘 파라미터 세팅
         </p>
 </div>
-<!-- Strategy 2-Way Segmented Control -->
-<div class="inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner">
-<button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md" id="mode-static" onclick="switchMode('static')" type="button">
-<span class="material-symbols-outlined text-[18px]">account_balance</span>
-<span>🏛️ 정적 자산배분 (Static Allocation)</span>
-</button>
-<button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-tripod" onclick="switchMode('tripod')" type="button">
-<span class="material-symbols-outlined text-[18px]">bolt</span>
-<span>⚡ 나스닥 레버리지 트라이포드 (Tripod)</span>
-<span class="ml-1 text-[10px] font-label-sm bg-secondary/15 text-secondary px-1.5 py-0.5 rounded-full font-mono">PRO</span>
-</button>
+<!-- Strategy 3-Way Segmented Control -->
+<div class="inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner gap-1" id="strategy-mode-selector">
+  <button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md" id="mode-static" onclick="switchMode('static')" type="button">
+    <span class="material-symbols-outlined text-[18px]">account_balance</span>
+    <span>🏛️ 정적 자산배분</span>
+  </button>
+  <button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-tripod" onclick="switchMode('tripod')" type="button">
+    <span class="material-symbols-outlined text-[18px]">bolt</span>
+    <span>⚡ 트라이포드</span>
+    <span class="ml-1 text-[10px] font-label-sm bg-secondary/15 text-secondary px-1.5 py-0.5 rounded-full font-mono">PRO</span>
+  </button>
+  <button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-dynamic" onclick="switchMode('dynamic')" type="button">
+    <span class="material-symbols-outlined text-[18px]">auto_graph</span>
+    <span>🦅 동적 자산배분 (DAA/VAA)</span>
+    <span class="ml-1 text-[10px] font-label-sm bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">QUANT</span>
+  </button>
 </div>
 </div>
 </section>
@@ -560,6 +565,160 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
       <span class="font-body-sm text-body-sm text-on-surface">1999 닷컴버블, 2008 금융위기 씬에 대한 생존성 검증 통과 (생존율 99.4%)</span>
     </div>
     <button id="btn-open-tripod-tune-modal" class="font-label-sm text-label-sm text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer" onclick="showTripodTuneModal()" type="button">파라미터 세부 튜닝 <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>
+  </div>
+</div>
+
+<!-- DYNAMIC ASSET ALLOCATION SUITE (DAA / VAA / Dual Momentum) -->
+<div class="rounded-xl bg-surface-container-low p-space-lg shadow-sm flex flex-col gap-space-md transition-all hidden" id="dynamic-panel" style="display: none;">
+  <!-- Dynamic Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-space-xs">
+    <div class="flex items-center gap-space-xs">
+      <span class="material-symbols-outlined text-primary text-[24px]">auto_graph</span>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-headline-sm text-headline-sm font-semibold text-on-surface">카나리아 동적 자산 배분 (Tactical Allocation)</span>
+          <span class="font-label-sm text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-mono font-bold">13612 MOMENTUM</span>
+        </div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">카나리아 위험 감지 기반 공격-수비 자산군 동적 스위칭 (VAA / DAA / 듀얼 모멘텀)</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="font-label-sm text-[11px] bg-surface-container-high px-3 py-1 rounded-full text-secondary font-mono font-bold">월간 모멘텀 리밸런싱</span>
+    </div>
+  </div>
+
+  <!-- 4 One-Click Dynamic Archetype Fast Presets -->
+  <div class="flex flex-wrap items-center justify-between gap-2 bg-surface-container px-space-md py-2.5 rounded-lg">
+    <div class="flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-primary text-[16px]">tune</span>
+      <span class="font-label-md text-label-md text-on-surface font-semibold">동적 배분 프리셋:</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-1.5" id="dynamic-preset-buttons">
+      <button type="button" id="btn-preset-daa" onclick="applyDynamicPreset('DAA_BALANCED')" class="px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-primary/20 text-primary hover:bg-primary/30 font-bold transition-all shadow-sm active:scale-95" title="DAA: 공격 11종, 수비 3종, 카나리아 VWO/BND, Top 2">
+        🛡️ DAA 균형형 (표준)
+      </button>
+      <button type="button" id="btn-preset-vaa" onclick="applyDynamicPreset('VAA_AGGRESSIVE')" class="px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-all active:scale-95" title="VAA: 카나리아 1개라도 음수면 100% 현금/채권 피신">
+        🦅 VAA 공격형
+      </button>
+      <button type="button" id="btn-preset-momentum" onclick="applyDynamicPreset('DUAL_MOMENTUM')" class="px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-all active:scale-95" title="안토나치 듀얼 모멘텀: 미국 SPY vs 전세계 EFA vs 채권 AGG/BIL">
+        🚀 듀얼 모멘텀
+      </button>
+      <button type="button" id="btn-preset-nasdaq-daa" onclick="applyDynamicPreset('NASDAQ_DAA')" class="px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-all active:scale-95" title="나스닥 섹터 DAA: QQQ/QLD/SOXX/SMH/XLK 중 Top 2">
+        ⚡ 나스닥 DAA
+      </button>
+    </div>
+  </div>
+
+  <!-- Dynamic Model Selection Bar -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm p-1 bg-surface-container-lowest rounded-xl">
+    <button type="button" id="model-tab-daa" onclick="setDynamicModel('DAA')" class="p-3 rounded-lg text-left transition-all bg-surface-container-high text-primary border border-primary/30 shadow-md">
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-label-sm font-bold text-xs uppercase tracking-wider">DAA (Dynamic Asset Allocation)</span>
+        <span class="material-symbols-outlined text-[18px]">verified_user</span>
+      </div>
+      <p class="text-[11px] text-on-surface-variant leading-tight">카나리아 양수 비율에 따라 공격과 수비 비중을 점진적(50/50, 100/0) 배분</p>
+    </button>
+    <button type="button" id="model-tab-vaa" onclick="setDynamicModel('VAA')" class="p-3 rounded-lg text-left transition-all text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-transparent">
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-label-sm font-bold text-xs uppercase tracking-wider">VAA (Vigilant Asset Allocation)</span>
+        <span class="material-symbols-outlined text-[18px]">shield</span>
+      </div>
+      <p class="text-[11px] text-on-surface-variant leading-tight">카나리아 중 1개라도 음수 시 즉시 100% 방어 자산으로 전원 피신 (극단적 방어)</p>
+    </button>
+    <button type="button" id="model-tab-momentum" onclick="setDynamicModel('MOMENTUM')" class="p-3 rounded-lg text-left transition-all text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-transparent">
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-label-sm font-bold text-xs uppercase tracking-wider">DUAL MOMENTUM</span>
+        <span class="material-symbols-outlined text-[18px]">trending_up</span>
+      </div>
+      <p class="text-[11px] text-on-surface-variant leading-tight">상대 모멘텀(1위 자산)과 절대 모멘텀(무위험 수익률 초과 여부) 결합 압축</p>
+    </button>
+  </div>
+
+  <!-- Universe Configuration: Offensive, Defensive, Canary -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+    <!-- Offensive Universe -->
+    <div class="p-space-md rounded-xl bg-surface-container flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="font-label-sm text-xs font-bold text-secondary font-mono flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">swords</span>
+          <span>공격 자산군 (Offensive)</span>
+        </span>
+        <span class="font-mono text-[10px] text-secondary bg-secondary/10 px-1.5 py-0.5 rounded" id="dynamic-off-count">11종목</span>
+      </div>
+      <p class="text-[11px] text-outline leading-tight">상승장에서 모멘텀 상위 Top N을 매수할 후보 자산군</p>
+      <div class="flex flex-wrap gap-1.5 p-2 bg-surface-container-lowest rounded-lg min-h-[58px] max-h-[120px] overflow-y-auto" id="dynamic-offensive-tags">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="flex items-center gap-1 mt-auto pt-1">
+        <input type="text" id="dynamic-offensive-input" onkeydown="if(event.key==='Enter') addDynamicAsset('offensive');" placeholder="티커 추가 (예: QQQ)" class="w-full bg-surface-container-lowest text-on-surface font-mono text-xs px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-secondary uppercase"/>
+        <button type="button" onclick="addDynamicAsset('offensive')" class="px-2.5 py-1.5 bg-secondary text-on-secondary rounded text-xs font-bold shrink-0 hover:bg-secondary/90 transition-all cursor-pointer">+</button>
+      </div>
+    </div>
+
+    <!-- Defensive Universe -->
+    <div class="p-space-md rounded-xl bg-surface-container flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="font-label-sm text-xs font-bold text-primary font-mono flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">shield</span>
+          <span>수비 자산군 (Defensive)</span>
+        </span>
+        <span class="font-mono text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded" id="dynamic-def-count">3종목</span>
+      </div>
+      <p class="text-[11px] text-outline leading-tight">하락 위험 시 자금을 피신시킬 안전 채권 및 대체자산</p>
+      <div class="flex flex-wrap gap-1.5 p-2 bg-surface-container-lowest rounded-lg min-h-[58px] max-h-[120px] overflow-y-auto" id="dynamic-defensive-tags">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="flex items-center gap-1 mt-auto pt-1">
+        <input type="text" id="dynamic-defensive-input" onkeydown="if(event.key==='Enter') addDynamicAsset('defensive');" placeholder="티커 추가 (예: IEF)" class="w-full bg-surface-container-lowest text-on-surface font-mono text-xs px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase"/>
+        <button type="button" onclick="addDynamicAsset('defensive')" class="px-2.5 py-1.5 bg-primary text-on-primary rounded text-xs font-bold shrink-0 hover:bg-primary/90 transition-all cursor-pointer">+</button>
+      </div>
+    </div>
+
+    <!-- Canary Universe -->
+    <div class="p-space-md rounded-xl bg-surface-container flex flex-col gap-2" id="canary-container-box">
+      <div class="flex items-center justify-between">
+        <span class="font-label-sm text-xs font-bold text-tertiary font-mono flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">notifications_active</span>
+          <span>카나리아 자산 (Canary)</span>
+        </span>
+        <span class="font-mono text-[10px] text-tertiary bg-tertiary/10 px-1.5 py-0.5 rounded" id="dynamic-can-count">2종목</span>
+      </div>
+      <p class="text-[11px] text-outline leading-tight">시장 위기 조기경보용 핵심 선행 지표 자산군</p>
+      <div class="flex flex-wrap gap-1.5 p-2 bg-surface-container-lowest rounded-lg min-h-[58px] max-h-[120px] overflow-y-auto" id="dynamic-canary-tags">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="flex items-center gap-1 mt-auto pt-1">
+        <input type="text" id="dynamic-canary-input" onkeydown="if(event.key==='Enter') addDynamicAsset('canary');" placeholder="티커 추가 (예: BND)" class="w-full bg-surface-container-lowest text-on-surface font-mono text-xs px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-tertiary uppercase"/>
+        <button type="button" onclick="addDynamicAsset('canary')" class="px-2.5 py-1.5 bg-tertiary text-on-tertiary rounded text-xs font-bold shrink-0 hover:bg-tertiary/90 transition-all cursor-pointer">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Parameters: Top N and Momentum Lookback -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm pt-1">
+    <div class="flex items-center justify-between p-space-md bg-surface-container rounded-lg">
+      <div>
+        <span class="block font-label-md text-xs font-semibold text-on-surface">선택 자산 개수 (Top N)</span>
+        <span class="font-body-sm text-[11px] text-outline">모멘텀 최상위 매수 대상 종목 수</span>
+      </div>
+      <select id="dynamic-top-n" onchange="state.dynamic.topN = parseInt(this.value);" class="bg-surface-container-lowest text-primary font-mono font-bold px-3 py-1.5 rounded-lg border border-outline/20 outline-none text-xs cursor-pointer">
+        <option value="1">Top 1개 (집중 투자)</option>
+        <option value="2" selected>Top 2개 (균형 분산)</option>
+        <option value="3">Top 3개 (안정 분산)</option>
+      </select>
+    </div>
+
+    <div class="flex items-center justify-between p-space-md bg-surface-container rounded-lg">
+      <div>
+        <span class="block font-label-md text-xs font-semibold text-on-surface">모멘텀 산출 가중치 방식</span>
+        <span class="font-body-sm text-[11px] text-outline">13612 가중 (12×1M + 4×3M + 2×6M + 1×12M)</span>
+      </div>
+      <select id="dynamic-lookback" onchange="state.dynamic.lookbackMonths = parseInt(this.value);" class="bg-surface-container-lowest text-secondary font-mono font-bold px-3 py-1.5 rounded-lg border border-outline/20 outline-none text-xs cursor-pointer">
+        <option value="12" selected>13612 가중 모멘텀 (표준)</option>
+        <option value="6">6개월 단순 모멘텀</option>
+        <option value="3">3개월 단기 모멘텀</option>
+      </select>
+    </div>
   </div>
 </div>
 <!-- BOTTOM ACTION WORKBAR -->
@@ -1486,6 +1645,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
       rsiPanic: 30,
       rsiOverbought: 70
     },
+    dynamic: {
+      model: 'DAA',
+      offensive: ['SPY', 'QQQ', 'IWM', 'VGK', 'EWJ', 'EEM', 'VNQ', 'GLD', 'TLT', 'HYG', 'LQD'],
+      defensive: ['SHY', 'IEF', 'LQD'],
+      canary: ['VWO', 'BND'],
+      topN: 2,
+      lookbackMonths: 12
+    },
     taxEnabled: true
   };
   window.state = state;
@@ -1513,37 +1680,219 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     }
   }
 
-  // --- 모드 전환: 정적전략 vs 트라이포드 전략 단일 화면 분기 ---
+  // --- 모드 전환: 정적전략 vs 트라이포드 vs 동적자산배분 3-Way 단일 화면 분기 ---
   function switchMode(newMode) {
     state.mode = newMode;
     const btnStatic = document.getElementById('mode-static');
     const btnTripod = document.getElementById('mode-tripod');
+    const btnDynamic = document.getElementById('mode-dynamic');
     const staticPanel = document.getElementById('static-panel');
     const tripodPanel = document.getElementById('tripod-panel');
+    const dynamicPanel = document.getElementById('dynamic-panel');
 
-    if (newMode === 'static') {
-      btnStatic.className = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md';
-      btnTripod.className = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200';
-      if (staticPanel) {
+    const activeBtnClass = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md';
+    const inactiveBtnClass = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200';
+
+    if (btnStatic) btnStatic.className = (newMode === 'static') ? activeBtnClass : inactiveBtnClass;
+    if (btnTripod) btnTripod.className = (newMode === 'tripod') ? activeBtnClass : inactiveBtnClass;
+    if (btnDynamic) btnDynamic.className = (newMode === 'dynamic') ? activeBtnClass : inactiveBtnClass;
+
+    if (staticPanel) {
+      if (newMode === 'static') {
         staticPanel.classList.remove('hidden');
         staticPanel.style.display = 'flex';
-      }
-      if (tripodPanel) {
-        tripodPanel.classList.add('hidden');
-        tripodPanel.style.display = 'none';
-      }
-    } else {
-      btnTripod.className = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md';
-      btnStatic.className = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200';
-      if (staticPanel) {
+      } else {
         staticPanel.classList.add('hidden');
         staticPanel.style.display = 'none';
       }
-      if (tripodPanel) {
+    }
+
+    if (tripodPanel) {
+      if (newMode === 'tripod') {
         tripodPanel.classList.remove('hidden');
         tripodPanel.style.display = 'flex';
+        updateTripodCardsUI();
+      } else {
+        tripodPanel.classList.add('hidden');
+        tripodPanel.style.display = 'none';
       }
     }
+
+    if (dynamicPanel) {
+      if (newMode === 'dynamic') {
+        dynamicPanel.classList.remove('hidden');
+        dynamicPanel.style.display = 'flex';
+        renderDynamicTags();
+      } else {
+        dynamicPanel.classList.add('hidden');
+        dynamicPanel.style.display = 'none';
+      }
+    }
+  }
+
+  // --- 동적 자산 배분 (DAA / VAA / Dual Momentum) 프리셋 및 유니버스 로직 ---
+  const DYNAMIC_PRESETS = {
+    'DAA_BALANCED': {
+      model: 'DAA',
+      offensive: ['SPY', 'QQQ', 'IWM', 'VGK', 'EWJ', 'EEM', 'VNQ', 'GLD', 'TLT', 'HYG', 'LQD'],
+      defensive: ['SHY', 'IEF', 'LQD'],
+      canary: ['VWO', 'BND'],
+      topN: 2,
+      lookbackMonths: 12
+    },
+    'VAA_AGGRESSIVE': {
+      model: 'VAA',
+      offensive: ['SPY', 'QQQ', 'IWM', 'VGK', 'EWJ', 'EEM', 'VNQ', 'GLD', 'TLT', 'LQD'],
+      defensive: ['SHY', 'IEF', 'LQD'],
+      canary: ['SPY', 'EFA', 'EEM', 'AGG'],
+      topN: 1,
+      lookbackMonths: 12
+    },
+    'DUAL_MOMENTUM': {
+      model: 'MOMENTUM',
+      offensive: ['SPY', 'EFA', 'BIL', 'AGG'],
+      defensive: ['BIL', 'AGG'],
+      canary: [],
+      topN: 1,
+      lookbackMonths: 6
+    },
+    'NASDAQ_DAA': {
+      model: 'DAA',
+      offensive: ['QQQ', 'QLD', 'SOXX', 'SMH', 'XLK'],
+      defensive: ['SHY', 'IEF', 'TLT'],
+      canary: ['QQQ', 'TLT'],
+      topN: 2,
+      lookbackMonths: 12
+    }
+  };
+
+  function applyDynamicPreset(presetKey) {
+    state.mode = 'dynamic';
+    const p = DYNAMIC_PRESETS[presetKey];
+    if (!p) return;
+    state.dynamic.model = p.model;
+    state.dynamic.offensive = [...p.offensive];
+    state.dynamic.defensive = [...p.defensive];
+    state.dynamic.canary = [...p.canary];
+    state.dynamic.topN = p.topN;
+    state.dynamic.lookbackMonths = p.lookbackMonths;
+
+    const pBtnMap = {
+      'DAA_BALANCED': 'btn-preset-daa',
+      'VAA_AGGRESSIVE': 'btn-preset-vaa',
+      'DUAL_MOMENTUM': 'btn-preset-momentum',
+      'NASDAQ_DAA': 'btn-preset-nasdaq-daa'
+    };
+    Object.keys(pBtnMap).forEach(k => {
+      const btn = document.getElementById(pBtnMap[k]);
+      if (btn) {
+        if (k === presetKey) {
+          btn.className = 'px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-primary/20 text-primary hover:bg-primary/30 font-bold transition-all shadow-sm active:scale-95';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-all active:scale-95';
+        }
+      }
+    });
+
+    setDynamicModel(p.model, false);
+    const topNSel = document.getElementById('dynamic-top-n');
+    if (topNSel) topNSel.value = p.topN.toString();
+    const lbSel = document.getElementById('dynamic-lookback');
+    if (lbSel) lbSel.value = p.lookbackMonths.toString();
+
+    renderDynamicTags();
+  }
+
+  function setDynamicModel(modelKey, updatePresetUi = true) {
+    state.dynamic.model = modelKey;
+    const tabs = {
+      'DAA': 'model-tab-daa',
+      'VAA': 'model-tab-vaa',
+      'MOMENTUM': 'model-tab-momentum'
+    };
+    Object.keys(tabs).forEach(m => {
+      const el = document.getElementById(tabs[m]);
+      if (!el) return;
+      if (m === modelKey) {
+        el.className = 'p-3 rounded-lg text-left transition-all bg-surface-container-high text-primary border border-primary/30 shadow-md';
+      } else {
+        el.className = 'p-3 rounded-lg text-left transition-all text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-transparent';
+      }
+    });
+
+    const canaryBox = document.getElementById('canary-container-box');
+    if (canaryBox) {
+      if (modelKey === 'MOMENTUM') {
+        canaryBox.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        canaryBox.classList.remove('opacity-40', 'pointer-events-none');
+      }
+    }
+  }
+
+  function renderDynamicTags() {
+    const offBox = document.getElementById('dynamic-offensive-tags');
+    const defBox = document.getElementById('dynamic-defensive-tags');
+    const canBox = document.getElementById('dynamic-canary-tags');
+
+    const offCount = document.getElementById('dynamic-off-count');
+    const defCount = document.getElementById('dynamic-def-count');
+    const canCount = document.getElementById('dynamic-can-count');
+
+    if (offCount) offCount.textContent = `${state.dynamic.offensive.length}종목`;
+    if (defCount) defCount.textContent = `${state.dynamic.defensive.length}종목`;
+    if (canCount) canCount.textContent = `${state.dynamic.canary.length}종목`;
+
+    if (offBox) {
+      offBox.innerHTML = state.dynamic.offensive.map(t => `
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary/15 text-secondary font-mono text-xs font-bold">
+          ${t}
+          <button type="button" onclick="removeDynamicAsset('offensive', '${t}')" class="hover:text-error text-[10px] cursor-pointer ml-0.5">✕</button>
+        </span>
+      `).join('') || '<span class="text-xs text-outline italic">등록된 자산 없음</span>';
+    }
+
+    if (defBox) {
+      defBox.innerHTML = state.dynamic.defensive.map(t => `
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/15 text-primary font-mono text-xs font-bold">
+          ${t}
+          <button type="button" onclick="removeDynamicAsset('defensive', '${t}')" class="hover:text-error text-[10px] cursor-pointer ml-0.5">✕</button>
+        </span>
+      `).join('') || '<span class="text-xs text-outline italic">등록된 자산 없음</span>';
+    }
+
+    if (canBox) {
+      canBox.innerHTML = state.dynamic.canary.map(t => `
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-tertiary/15 text-tertiary font-mono text-xs font-bold">
+          ${t}
+          <button type="button" onclick="removeDynamicAsset('canary', '${t}')" class="hover:text-error text-[10px] cursor-pointer ml-0.5">✕</button>
+        </span>
+      `).join('') || '<span class="text-xs text-outline italic">미사용</span>';
+    }
+  }
+
+  function addDynamicAsset(group) {
+    const inputId = `dynamic-${group}-input`;
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    let raw = input.value.trim().toUpperCase();
+    if (!raw) return;
+    if (raw.endsWith('.KS')) raw = raw;
+    else if (/^\d{6}$/.test(raw)) raw = raw + '.KS';
+
+    if (state.dynamic[group].includes(raw)) {
+      alert(`'${raw}' 종목은 이미 ${group} 그룹에 추가되어 있습니다.`);
+      return;
+    }
+
+    state.dynamic[group].push(raw);
+    input.value = '';
+    renderDynamicTags();
+  }
+
+  function removeDynamicAsset(group, ticker) {
+    state.dynamic[group] = state.dynamic[group].filter(t => t !== ticker);
+    renderDynamicTags();
   }
 
   // --- 1/N 균등 배분 기능 (정적 자산 배분) ---
@@ -2939,7 +3288,7 @@ ${errText}
       if (Math.abs(currentTotal - 100) >= 0.05) {
         normalizeWeights();
       }
-    } else {
+    } else if (state.mode === 'tripod') {
       const tTotal = state.tripod.bufferWeight + state.tripod.coreWeight + state.tripod.baseWeight + state.tripod.panicWeight;
       if (Math.abs(tTotal - 100) >= 0.05) {
         normalizeTripodWeights();
@@ -2978,7 +3327,8 @@ ${errText}
       bandVal: state.bandVal,
       assets: state.assets,
       tripod: state.tripod,
-      tripodParams: state.tripodParams
+      tripodParams: state.tripodParams,
+      dynamic: state.dynamic
     };
 
     try {
@@ -3027,6 +3377,9 @@ ${errText}
       if (state.mode === 'tripod') {
         const tList = [state.tripod.core, state.tripod.base, state.tripod.panic, state.tripod.buffer].join('+');
         bannerTitle.textContent = `나스닥 레버리지 트라이포드 (${tList} Tripod Alpha)`;
+      } else if (state.mode === 'dynamic') {
+        const d = state.dynamic;
+        bannerTitle.textContent = `동적 자산배분 (${d.model} 모멘텀 • 공격 ${d.offensive.length}종 / 방어 ${d.defensive.length}종 / 카나리아 ${d.canary.length}종)`;
       } else {
         const assetSummary = state.assets.map(a => a.ticker).join('+');
         const rebLabel = state.bandEnabled ? ` (밴드 ±${state.bandVal}%p)` : ' (정기 주기)';
@@ -3311,6 +3664,10 @@ ${errText}
       rawCAGR = 24.5;
       estMDD = -17.2;
       divYield = 1.65;
+    } else if (payload.mode === 'dynamic') {
+      rawCAGR = 19.8;
+      estMDD = -14.6;
+      divYield = 1.85;
     }
 
     const dcaSteps = payload.dcaFreq === 'Q' ? Math.floor(months / 3) : months;
@@ -3363,6 +3720,7 @@ ${errText}
   // Initial Boot
   renderAssetList();
   syncTripodInputsFromState();
+  renderDynamicTags();
   initDateLimits();
 </script>
 </body>
