@@ -99,6 +99,22 @@ def test_dynamic_asset_allocation():
         print(f"[REPORT] Banner Title: {banner_h1}")
         assert "동적 자산배분" in banner_h1 and "DAA" in banner_h1, f"Unexpected banner title: {banner_h1}"
 
+        strat_id = page.locator("#report-strategy-id").text_content()
+        print(f"[REPORT] Strategy ID Badge: {strat_id}")
+        assert "DAA" in strat_id or "MOMENTUM" in strat_id, f"Strategy ID must reflect dynamic model: {strat_id}"
+
+        legend_label = page.locator("#chart-legend-strategy-label").text_content()
+        print(f"[REPORT] Chart Legend Label: {legend_label}")
+        assert "동적 자산배분" in legend_label, f"Legend must reflect dynamic model: {legend_label}"
+
+        heat_desc = page.locator("#monthly-heatmap-desc").text_content()
+        print(f"[REPORT] Heatmap Desc: {heat_desc}")
+        assert "동적" in heat_desc, f"Heatmap description must be dynamic: {heat_desc}"
+
+        reb_desc = page.locator("#rebalance-history-desc").text_content()
+        print(f"[REPORT] Rebalance Desc: {reb_desc}")
+        assert "카나리아" in reb_desc or "모멘텀" in reb_desc, f"Rebalance description must be dynamic: {reb_desc}"
+
         kpi_cagr = page.locator("#kpi-cagr").text_content()
         kpi_mdd = page.locator("#kpi-mdd").text_content()
         kpi_sharpe = page.locator("#kpi-sharpe").text_content()
@@ -111,7 +127,16 @@ def test_dynamic_asset_allocation():
         assert curve_d and len(curve_d) > 20, "Chart curve path 'd' must be drawn"
         print(f"[PASS] Chart curve rendered with {len(curve_d)} path characters")
 
-        # 리밸런싱 로그 검증
+        # 7. 차트 마우스 호버 액션 검증 (트라이포드 잔재 방지)
+        chart_area = page.locator("#chart-hover-area")
+        box = chart_area.bounding_box()
+        page.mouse.move(box["x"] + box["width"] * 0.45, box["y"] + box["height"] * 0.5)
+        page.wait_for_timeout(200)
+        hover_title = page.locator("#tooltip-event-title").text_content()
+        print(f"[REPORT] Chart Hover Tooltip Title: {hover_title}")
+        assert "동적" in hover_title or "카나리아" in hover_title or "방어" in hover_title or "모멘텀" in hover_title, f"Tooltip should not show tripod in dynamic mode: {hover_title}"
+
+        # 8. 리밸런싱 로그 검증
         log_rows = page.locator("#rebalance-log-tbody tr")
         row_count = log_rows.count()
         assert row_count > 0, "Rebalance log must contain records"

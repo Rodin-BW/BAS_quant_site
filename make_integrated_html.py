@@ -773,7 +773,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 <!-- Interactive Floating Hover Tooltip -->
 <div id="chart-interactive-tooltip" class="absolute bg-surface-container-highest/95 backdrop-blur-md p-space-sm rounded-lg shadow-2xl text-left pointer-events-none transition-all duration-75 border border-outline/20 opacity-0 z-30" style="left: 0px; top: 0px; transform: translate(-50%, -125%); min-width: 190px;">
 <p id="tooltip-date-header" class="font-label-sm text-label-sm text-outline font-mono">2022.10 FED TIGHTENING</p>
-<p id="tooltip-event-title" class="font-body-sm text-body-sm text-on-surface font-semibold">트라이포드 변동성 방어 작동</p>
+<p id="tooltip-event-title" class="font-body-sm text-body-sm text-on-surface font-semibold">퀀트 포트폴리오 리밸런싱</p>
 <div class="flex items-center gap-space-xs font-mono font-label-sm text-label-sm mt-1">
 <span id="tooltip-bas-val" class="text-primary font-bold">BAS: -18.2%</span>
 <span class="text-outline">|</span>
@@ -782,6 +782,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 </div>
 </div>"""
     r_body = re.sub(chart_hover_old, chart_hover_new, r_body, flags=re.DOTALL)
+
+    # 15.6.1 리포트 내 하드코딩된 트라이포드 텍스트를 모드별 동적 엘리먼트로 교체
+    r_body = r_body.replace(
+        '<span class="font-label-sm text-label-sm text-outline font-mono">ID: TRIPOD-ALPHA-V4</span>',
+        '<span id="report-strategy-id" class="font-label-sm text-label-sm text-outline font-mono">ID: QUANT-PORTFOLIO-V4</span>'
+    )
+    r_body = r_body.replace(
+        '<span class="text-on-surface font-semibold">BAS Tripod 전략 (₩14.89억)</span>',
+        '<span id="chart-legend-strategy-label" class="text-on-surface font-semibold">BAS 퀀트 전략 곡선</span>'
+    )
+    r_body = r_body.replace(
+        '<p class="font-body-sm text-body-sm text-outline">최근 6개년 월간 트라이포드 성과 매트릭스</p>',
+        '<p id="monthly-heatmap-desc" class="font-body-sm text-body-sm text-outline">월간 포트폴리오 성과 및 연간 복리 누적 매트릭스</p>'
+    )
+    r_body = r_body.replace(
+        '<p class="font-body-sm text-body-sm text-outline">Tripod Weight Switching Events</p>',
+        '<p id="rebalance-history-desc" class="font-body-sm text-body-sm text-outline">포트폴리오 자산 배분 비중 조정 및 스위칭 이벤트</p>'
+    )
 
     # 15.7 메인 차트 SVG 패스들에 id 부여
     r_body = r_body.replace('<path d="M 0 260 Q 500 240 1000 215"', '<path id="curve-rf" d="M 0 260 Q 500 240 1000 215"')
@@ -2862,6 +2880,56 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
       }
     }
 
+    // 상단 전략 ID 배지
+    const stratIdEl = document.getElementById('report-strategy-id');
+    if (stratIdEl) {
+      if (state.mode === 'tripod') {
+        stratIdEl.textContent = 'ID: TRIPOD-ALPHA-V4';
+      } else if (state.mode === 'dynamic') {
+        stratIdEl.textContent = `ID: ${state.dynamic.model}-MOMENTUM-V4`;
+      } else {
+        stratIdEl.textContent = 'ID: STATIC-ALLOC-V4';
+      }
+    }
+
+    // 차트 범례 라벨 동기화
+    const legendLabel = document.getElementById('chart-legend-strategy-label');
+    if (legendLabel) {
+      const wealthFmt = (finalAfterTaxWealth >= 100000000)
+        ? `(₩${(finalAfterTaxWealth / 100000000).toFixed(2)}억)`
+        : `(₩${Math.round(finalAfterTaxWealth / 10000).toLocaleString('ko-KR')}만)`;
+      if (state.mode === 'tripod') {
+        legendLabel.textContent = `나스닥 트라이포드 전략 ${wealthFmt}`;
+      } else if (state.mode === 'dynamic') {
+        legendLabel.textContent = `동적 자산배분 (${state.dynamic.model}) ${wealthFmt}`;
+      } else {
+        legendLabel.textContent = `정적 자산배분 전략 ${wealthFmt}`;
+      }
+    }
+
+    // 월간 히트맵 및 리밸런싱 히스토리 설명 텍스트 동기화
+    const heatDesc = document.getElementById('monthly-heatmap-desc');
+    if (heatDesc) {
+      if (state.mode === 'dynamic') {
+        heatDesc.textContent = `월간 ${state.dynamic.model} 동적 모멘텀 자산배분 성과 매트릭스`;
+      } else if (state.mode === 'tripod') {
+        heatDesc.textContent = `월간 나스닥 레버리지 트라이포드 성과 매트릭스`;
+      } else {
+        heatDesc.textContent = `월간 정적 자산배분 성과 매트릭스`;
+      }
+    }
+
+    const rebDesc = document.getElementById('rebalance-history-desc');
+    if (rebDesc) {
+      if (state.mode === 'dynamic') {
+        rebDesc.textContent = `${state.dynamic.model} 카나리아 시그널 및 모멘텀 스위칭 기록`;
+      } else if (state.mode === 'tripod') {
+        rebDesc.textContent = `Tripod Weight Switching Events (하방 지지 & 레버리지 분할매수)`;
+      } else {
+        rebDesc.textContent = `정기 주기 및 밴드 이탈 리밸런싱 실행 기록`;
+      }
+    }
+
     let yDisplay = Math.floor(years);
     let mDisplay = Math.round((years - yDisplay) * 12);
     if (mDisplay === 12) { yDisplay += 1; mDisplay = 0; }
@@ -3059,20 +3127,29 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
     // 특수 시장 이벤트 매핑 (일봉 정밀 추적)
     let eventHeader = `${dateStr} 일봉 (Daily Bar)`;
-    let eventTitle = state.mode === 'tripod' ? '나스닥 레버리지 트라이포드 운용' : '정적 자산배분 리밸런싱';
+    let eventTitle = '정적 자산배분 리밸런싱';
+    if (state.mode === 'tripod') {
+      eventTitle = '나스닥 레버리지 트라이포드 운용';
+    } else if (state.mode === 'dynamic') {
+      eventTitle = `동적 자산배분 (${state.dynamic.model}) 모멘텀 운용`;
+    }
 
     if (yStr === 2020 && curDate.getMonth() >= 1 && curDate.getMonth() <= 4) {
       eventHeader = `${dateStr} COVID-19 CRASH (일봉)`;
-      eventTitle = '팬더믹 낙폭 분할매수 사다리 가동';
+      if (state.mode === 'tripod') eventTitle = '팬더믹 낙폭 분할매수 사다리 가동';
+      else if (state.mode === 'dynamic') eventTitle = '카나리아 수비 자산 전환 (방어 모드)';
+      else eventTitle = '정적 자산배분 안전자산 리밸런싱';
     } else if (yStr === 2022 && curDate.getMonth() >= 8 && curDate.getMonth() <= 10) {
       eventHeader = `${dateStr} FED TIGHTENING (일봉)`;
-      eventTitle = '트라이포드 변동성 방어 작동 (현금 비중 확대)';
+      if (state.mode === 'tripod') eventTitle = '트라이포드 변동성 방어 작동 (현금 비중 확대)';
+      else if (state.mode === 'dynamic') eventTitle = `${state.dynamic.model} 방어 국면 스위칭 (채권/현금 피난)`;
+      else eventTitle = '정적 자산배분 밴드 리밸런싱 (자산 방어)';
     } else if (yStr >= 2024) {
       eventHeader = `${dateStr} AI MOMENTUM RALLY (일봉)`;
       eventTitle = '신고가(ATH) 돌파 및 복리 극대화';
     } else if (yStr === 2018 && curDate.getMonth() >= 9) {
       eventHeader = `${dateStr} 무역분쟁 & 금리인상 (일봉)`;
-      eventTitle = '안전자산(채권/금) 방어 작동';
+      eventTitle = '안전자산(채권/현금) 방어 작동';
     }
 
     const tDate = document.getElementById('tooltip-date-header');
