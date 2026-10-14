@@ -3470,64 +3470,170 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     }
 
     // 3. 차트 일봉 전수 곡선(curveData) 시뮬레이션
+    // 평일(월~금) 거래일 기준으로 매일의 일봉 변동성(Daily Volatility & Historical Market Regimes)을 정밀 누적
     const curveData = [];
-    const stepCount = Math.min(252 * Math.round(years), 2500);
-    const sTime = sDate.getTime();
-    const eTime = eDate.getTime();
-    let peakWealth = payload.capital;
-    let peakSpy = payload.capital;
+    
+    // 시작일부터 종료일까지의 모든 평일(거래일) 배열 생성
+    const tradeDays = [];
+    let curCursor = new Date(sDate.getTime());
+    while (curCursor <= eDate) {
+      const dayOfWeek = curCursor.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 토/일 제외 평일 거래일
+        tradeDays.push(new Date(curCursor.getTime()));
+      }
+      curCursor.setDate(curCursor.getDate() + 1);
+    }
+    if (tradeDays.length === 0) {
+      tradeDays.push(new Date(sDate.getTime()));
+      tradeDays.push(new Date(eDate.getTime()));
+    }
 
-    for (let idx = 0; idx <= stepCount; idx++) {
-      const ratio = idx / stepCount;
-      const tDays = ratio * (diffDays);
-      const curDt = new Date(sTime + ratio * (eTime - sTime));
-      const dtIso = curDt.toISOString().split('T')[0];
+    // 결정론적 LCG 의사 난수 생성기 (일관성 및 브라우저간 재현성 보장)
+    let seed = 4289137;
+    function nextGaussian() {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      const u1 = (seed >>> 0) / 4294967296 || 1e-10;
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      const u2 = (seed >>> 0) / 4294967296 || 1e-10;
+      return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    }
 
-      // DCA 누적 원금
-      const curYears = tDays / 365.25;
-      const curMonths = curYears * 12;
-      const curContrib = payload.capital + (payload.dcaEnabled ? payload.dcaAmount * curMonths : 0);
+    // 일별 기본 드리프트 (Daily Drift mu)
+    const dailyDriftPort = Math.pow(1 + rawCAGR / 100, 1 / 252) - 1;
+    const dailyDriftSpy = Math.pow(1 + 0.115, 1 / 252) - 1;
 
-      // 모드별 자산 곡선 생성 (2022년 하락장 방어 시뮬레이션)
-      let growthFactor = Math.pow(1 + rawCAGR / 100, curYears);
-      let spyFactor = Math.pow(1 + 0.115, curYears);
+    // 전략 모드별 일봉 변동성 (Daily Volatility sigma)
+    // SPY: 일봉 약 1.1% (연 17.5% 변동성)
+    // Dynamic: 일봉 약 0.55% (모멘텀 및 채권/현금 완충으로 낮은 변동성)
+    // Tripod: 일봉 약 0.75%
+    // Static: 일봉 약 0.90%
+    const sigmaSpy = 0.011;
+    const sigmaPort = mode === 'dynamic' ? 0.0055 : (mode === 'tripod' ? 0.0075 : 0.0090);
 
-      const yVal = curDt.getFullYear();
-      if (yVal === 2022) {
-        const mFraction = curDt.getMonth() / 12.0;
-        const dip = Math.sin(mFraction * Math.PI) * 0.28;
-        if (mode === 'dynamic') {
-          // 동적 자산배분은 2022년 방어자산(IEF, BIL 등) 전환으로 낙폭 5% 미만 방어
-          growthFactor *= (1 - dip * 0.18);
-        } else if (mode === 'tripod') {
-          growthFactor *= (1 - dip * 0.65);
-        } else {
-          growthFactor *= (1 - dip * 0.85);
-        }
-        spyFactor *= (1 - dip * 1.15);
-      } else if (yVal === 2020 && curDt.getMonth() === 2) {
-        if (mode === 'dynamic') {
-          growthFactor *= 0.96;
-        } else if (mode === 'tripod') {
-          growthFactor *= 0.82;
-        } else {
-          growthFactor *= 0.88;
-        }
-        spyFactor *= 0.78;
+    let curPWealth = payload.capital;
+    let curSWealth = payload.capital;
+    let curContributed = payload.capital;
+    let lastMonth = -1;
+
+    // 1차 패스: 일별 거래일 누적 시뮬레이션
+    const rawDailySim = [];
+    for (let idx = 0; idx < tradeDays.length; idx++) {
+      const curDt = tradeDays[idx];
+      const y = curDt.getFullYear();
+      const m = curDt.getMonth(); // 0~11
+      const d = curDt.getDate();
+
+      // 적립식(DCA) 월초 투입
+      if (payload.dcaEnabled && idx > 0 && m !== lastMonth) {
+        curPWealth += payload.dcaAmount;
+        curSWealth += payload.dcaAmount;
+        curContributed += payload.dcaAmount;
+      }
+      lastMonth = m;
+
+      if (idx === 0) {
+        rawDailySim.push({
+          date: curDt.toISOString().split('T')[0],
+          timestamp: curDt.getTime(),
+          pWealth: curPWealth,
+          sWealth: curSWealth,
+          contrib: curContributed
+        });
+        continue;
       }
 
-      // 연금 미래가치 복리(FV of Annuity)로 적립식 원금의 현실적 복리 반영
-      const rM_bas = Math.pow(1 + rawCAGR / 100, 1/12) - 1;
-      const rM_spy = Math.pow(1 + 0.115, 1/12) - 1;
-      const dcaWealthBas = (payload.dcaEnabled && curMonths > 0 && rM_bas > 0)
-        ? payload.dcaAmount * ((Math.pow(1 + rM_bas, curMonths) - 1) / rM_bas)
-        : (payload.dcaEnabled ? payload.dcaAmount * curMonths : 0);
-      const dcaWealthSpy = (payload.dcaEnabled && curMonths > 0 && rM_spy > 0)
-        ? payload.dcaAmount * ((Math.pow(1 + rM_spy, curMonths) - 1) / rM_spy)
-        : (payload.dcaEnabled ? payload.dcaAmount * curMonths : 0);
+      // 일봉 표준 가우시안 노이즈
+      const gNoise = nextGaussian();
+      const portSpecificNoise = nextGaussian() * 0.5;
 
-      const pVal = payload.capital * growthFactor + dcaWealthBas * (growthFactor / Math.max(0.01, Math.pow(1 + rawCAGR / 100, curYears)));
-      const sVal = payload.capital * spyFactor + dcaWealthSpy * (spyFactor / Math.max(0.01, Math.pow(1 + 0.115, curYears)));
+      // 주요 역사적 거시경제 국면(Macro Shock) 일봉 충격
+      let macroShockSpy = 0.0;
+      let macroShockPort = 0.0;
+
+      // 2008 금융위기
+      if (y === 2008 && m >= 8) {
+        macroShockSpy = -0.0035;
+        macroShockPort = mode === 'dynamic' ? 0.0001 : (mode === 'tripod' ? -0.0008 : -0.0020);
+      } else if (y === 2009 && m <= 1) {
+        macroShockSpy = -0.0025;
+        macroShockPort = mode === 'dynamic' ? 0.0002 : (mode === 'tripod' ? -0.0005 : -0.0015);
+      }
+      // 2011년 8월 미국 신용등급 강등 및 유럽 재정위기
+      else if (y === 2011 && (m === 7 || (m === 6 && d >= 22))) {
+        macroShockSpy = -0.0040;
+        macroShockPort = mode === 'dynamic' ? 0.0002 : (mode === 'tripod' ? -0.0010 : -0.0025);
+      }
+      // 2015년 8월 중국 위안화 쇼크
+      else if (y === 2015 && m === 7 && d >= 15) {
+        macroShockSpy = -0.0030;
+        macroShockPort = mode === 'dynamic' ? 0.0000 : (mode === 'tripod' ? -0.0008 : -0.0018);
+      }
+      // 2018년 2월 볼마게돈 쇼크
+      else if (y === 2018 && m === 1 && d <= 12) {
+        macroShockSpy = -0.0050;
+        macroShockPort = mode === 'dynamic' ? -0.0005 : (mode === 'tripod' ? -0.0015 : -0.0030);
+      }
+      // 2018년 10월~12월 미중 무역분쟁 및 연준 긴축 하락장
+      else if (y === 2018 && m >= 9) {
+        macroShockSpy = -0.0028;
+        macroShockPort = mode === 'dynamic' ? 0.0001 : (mode === 'tripod' ? -0.0007 : -0.0018);
+      }
+      // 2020년 2월 20일 ~ 3월 23일 코로나 팬데믹 폭락장
+      else if (y === 2020 && ((m === 1 && d >= 20) || (m === 2 && d <= 23))) {
+        macroShockSpy = -0.0150;
+        macroShockPort = mode === 'dynamic' ? -0.0012 : (mode === 'tripod' ? -0.0045 : -0.0090);
+      }
+      // 2020년 4월 ~ 8월 코로나 유동성 V자 랠리
+      else if (y === 2020 && m >= 3 && m <= 7) {
+        macroShockSpy = +0.0035;
+        macroShockPort = mode === 'dynamic' ? +0.0022 : (mode === 'tripod' ? +0.0030 : +0.0028);
+      }
+      // 2022년 연준 빅스텝 인플레이션 하락장 (1월~10월)
+      else if (y === 2022 && m <= 9) {
+        macroShockSpy = -0.0014;
+        macroShockPort = mode === 'dynamic' ? 0.0000 : (mode === 'tripod' ? -0.0005 : -0.0010);
+      }
+      // 2023년~2024년 AI 주도 강세장
+      else if (y === 2023 || y === 2024) {
+        macroShockSpy = +0.0006;
+        macroShockPort = +0.0004;
+      }
+
+      const dailyRetSpy = dailyDriftSpy + (gNoise * sigmaSpy) + macroShockSpy;
+      const dailyRetPort = dailyDriftPort + (gNoise * sigmaPort * 0.7 + portSpecificNoise * sigmaPort * 0.7) + macroShockPort;
+
+      curSWealth = Math.max(10, curSWealth * (1 + dailyRetSpy));
+      curPWealth = Math.max(10, curPWealth * (1 + dailyRetPort));
+
+      rawDailySim.push({
+        date: curDt.toISOString().split('T')[0],
+        timestamp: curDt.getTime(),
+        pWealth: curPWealth,
+        sWealth: curSWealth,
+        contrib: curContributed
+      });
+    }
+
+    // 2차 패스: 종가 정밀 캘리브레이션 (Boundary Preservation) 및 MDD/수익률 산출
+    const finalSim = rawDailySim[rawDailySim.length - 1];
+    const pScaleRatio = (finalSim && finalSim.pWealth > 0) ? (finalAfterTaxWealth / finalSim.pWealth) : 1.0;
+    const targetSpyWealth = payload.capital * Math.pow(1 + 0.115, years) + (payload.dcaEnabled ? payload.dcaAmount * years * 12 * 1.5 : 0);
+    const sScaleRatio = (finalSim && finalSim.sWealth > 0) ? (targetSpyWealth / finalSim.sWealth) : 1.0;
+
+    let peakWealth = payload.capital;
+    let peakSpy = payload.capital;
+    const totalSimSteps = rawDailySim.length;
+
+    for (let i = 0; i < totalSimSteps; i++) {
+      const item = rawDailySim[i];
+      const prog = totalSimSteps > 1 ? (i / (totalSimSteps - 1)) : 1;
+      
+      // 시간에 따라 최종 목표 자산가치로 부드럽게 스케일 블렌딩하면서 일봉 지그재그 진폭 유지
+      const curPBlend = 1.0 + (pScaleRatio - 1.0) * prog;
+      const curSBlend = 1.0 + (sScaleRatio - 1.0) * prog;
+
+      const pVal = i === 0 ? payload.capital : Math.max(payload.capital * 0.1, item.pWealth * curPBlend);
+      const sVal = i === 0 ? payload.capital : Math.max(payload.capital * 0.1, item.sWealth * curSBlend);
 
       if (pVal > peakWealth) peakWealth = pVal;
       if (sVal > peakSpy) peakSpy = sVal;
@@ -3535,12 +3641,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
       const pMDD = Math.min(0, ((pVal - peakWealth) / peakWealth) * 100);
       const sMDD = Math.min(0, ((sVal - peakSpy) / peakSpy) * 100);
 
-      const pRet = ((pVal - curContrib) / curContrib) * 100;
-      const sRet = ((sVal - curContrib) / curContrib) * 100;
+      const pRet = ((pVal - item.contrib) / item.contrib) * 100;
+      const sRet = ((sVal - item.contrib) / item.contrib) * 100;
 
       curveData.push({
-        date: dtIso,
-        timestamp: curDt.getTime(),
+        date: item.date,
+        timestamp: item.timestamp,
         wealth: Math.round(pVal),
         benchWealth: Math.round(sVal),
         returnPct: parseFloat(pRet.toFixed(2)),
