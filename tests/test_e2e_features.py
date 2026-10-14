@@ -87,14 +87,35 @@ def test_e2e_features():
         page.screenshot(path=ticker_filter_screenshot, full_page=True)
         print(f"Ticker filter verification screenshot saved to {ticker_filter_screenshot}", flush=True)
 
-        # 2. 날짜 피커 제한 해제 확인 (max 속성이 제거되어 최신 날짜 제한 없음)
-        print("3. Checking date picker range (max attribute unlocked)...", flush=True)
+        # 2. 날짜 피커 제한 해제 및 달력 아이콘 클릭 인터랙션 확인
+        print("3. Checking date picker range and calendar icon click interactions...", flush=True)
         end_date_input = target_frame.locator("#sim-end-date")
         max_attr = end_date_input.get_attribute("max")
         val_attr = end_date_input.input_value()
         print(f"End date value: {val_attr}, max attribute: {max_attr}", flush=True)
         assert max_attr is None or max_attr == "", f"Max attribute should be unlocked: {max_attr}"
         assert val_attr.startswith("2026"), f"Default end date should be today 2026: {val_attr}"
+
+        # 2.1 달력 아이콘 클릭 시 showPicker() 인터랙션 검증
+        target_frame.evaluate("""() => {
+            window.__iconPickerCalls = { start: 0, end: 0 };
+            const s = document.getElementById('sim-start-date');
+            const e = document.getElementById('sim-end-date');
+            if (s) {
+                const origS = s.showPicker;
+                s.showPicker = function() { window.__iconPickerCalls.start++; if (origS) origS.call(this); };
+            }
+            if (e) {
+                const origE = e.showPicker;
+                e.showPicker = function() { window.__iconPickerCalls.end++; if (origE) origE.call(this); };
+            }
+        }""")
+        target_frame.locator("#btn-calendar-start").click()
+        target_frame.locator("#btn-calendar-end").click()
+        time.sleep(0.5)
+        calls = target_frame.evaluate("() => window.__iconPickerCalls")
+        print(f"Calendar icon click picker calls: {calls}", flush=True)
+        assert calls["start"] >= 1 and calls["end"] >= 1, f"Calendar icons must trigger showPicker: {calls}"
         
         # 3. 백테스트 실행 버튼 클릭
         print("4. Clicking Run Simulation button...", flush=True)

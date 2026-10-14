@@ -19,6 +19,19 @@ def build():
 
     # 3. Base HTML 헤더 및 구조
     head_content = re.search(r'(<head>.*?</head>)', builder_html, re.DOTALL).group(1)
+    calendar_style = """<style>
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.8);
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+</style>
+</head>"""
+    head_content = head_content.replace('</head>', calendar_style)
     header_content = re.search(r'(<header class="[^"]*">.*?</header>)', builder_html, re.DOTALL).group(1)
     footer_content = re.search(r'(<footer class="[^"]*">.*?</footer>)', builder_html, re.DOTALL).group(1)
 
@@ -82,13 +95,13 @@ def build():
     period_block_old = r'<div class="grid grid-cols-2 gap-space-sm">\s*<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg">\s*<span class="material-symbols-outlined text-outline text-\[16px\]">calendar_today</span>\s*<input [^>]*value="2010-01-01"[^>]*/>\s*</div>\s*<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg">\s*<span class="material-symbols-outlined text-outline text-\[16px\]">event</span>\s*<input [^>]*value="2024-04-30"[^>]*/>\s*</div>\s*</div>\s*<div class="flex justify-between items-center px-1">\s*<span class="font-label-sm text-\[11px\] text-outline">.*?</span>\s*<div class="flex gap-1">\s*<button[^>]*>5Y</button>\s*<button[^>]*>10Y</button>\s*<button[^>]*>MAX \(40Y\)</button>\s*</div>\s*</div>'
     today_str = datetime.date.today().strftime('%Y-%m-%d')
     period_block_new = f"""<div class="grid grid-cols-2 gap-space-sm">
-  <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg focus-within:ring-1 focus-within:ring-primary">
-    <span class="material-symbols-outlined text-primary text-[16px]">calendar_today</span>
-    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-start-date" value="2010-01-01" min="1980-01-01" onchange="handleDateChange()" oninput="handleDateChange()"/>
+  <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg focus-within:ring-1 focus-within:ring-primary cursor-pointer hover:bg-surface-container-low transition-colors group" onclick="openDatePicker('sim-start-date')" title="시작일 달력 열기">
+    <span id="btn-calendar-start" class="material-symbols-outlined text-primary text-[18px] cursor-pointer group-hover:scale-110 active:scale-95 transition-transform select-none" onclick="event.stopPropagation(); openDatePicker('sim-start-date')" title="시작일 달력 열기">calendar_today</span>
+    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-start-date" value="2010-01-01" min="1980-01-01" onchange="handleDateChange()" oninput="handleDateChange()" onclick="event.stopPropagation(); openDatePicker('sim-start-date')"/>
   </div>
-  <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg focus-within:ring-1 focus-within:ring-primary">
-    <span class="material-symbols-outlined text-primary text-[16px]">event</span>
-    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-end-date" value="{today_str}" min="1980-01-01" onchange="handleDateChange()" oninput="handleDateChange()"/>
+  <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg focus-within:ring-1 focus-within:ring-primary cursor-pointer hover:bg-surface-container-low transition-colors group" onclick="openDatePicker('sim-end-date')" title="종료일 달력 열기">
+    <span id="btn-calendar-end" class="material-symbols-outlined text-primary text-[18px] cursor-pointer group-hover:scale-110 active:scale-95 transition-transform select-none" onclick="event.stopPropagation(); openDatePicker('sim-end-date')" title="종료일 달력 열기">event</span>
+    <input class="bg-transparent font-table-numeric text-table-numeric text-on-surface outline-none w-full cursor-pointer text-sm" type="date" id="sim-end-date" value="{today_str}" min="1980-01-01" onchange="handleDateChange()" oninput="handleDateChange()" onclick="event.stopPropagation(); openDatePicker('sim-end-date')"/>
   </div>
 </div>
 <div class="flex justify-between items-center px-1">
@@ -1431,6 +1444,20 @@ def build():
       if (startInput) startInput.value = '1984-05-01';
     }
     handleDateChange();
+  }
+
+  function openDatePicker(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      if (typeof el.showPicker === 'function') {
+        el.showPicker();
+      } else {
+        el.focus();
+      }
+    } catch (err) {
+      el.focus();
+    }
   }
 
   function initDateLimits() {
