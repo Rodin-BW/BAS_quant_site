@@ -12,10 +12,11 @@ def build():
     b_main = re.search(r'<main class="[^"]*">(.*?)</main>', builder_html, re.DOTALL).group(1)
     b_script = re.search(r'(<script>.*?</script>)', b_main, re.DOTALL).group(1)
     b_body = b_main.replace(b_script, "")
+    b_body = b_body.replace('px-gutter-desktop', 'px-3 sm:px-gutter-desktop')
 
     # 2. Report 본문 추출
     r_main = re.search(r'<main class="[^"]*">(.*?)</main>', report_html, re.DOTALL).group(1)
-    r_body = r_main
+    r_body = r_main.replace('px-margin md:px-margin-desktop', 'px-3 sm:px-margin md:px-margin-desktop')
 
     # 3. Base HTML 헤더 및 구조
     head_content = re.search(r'(<head>.*?</head>)', builder_html, re.DOTALL).group(1)
@@ -84,20 +85,23 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     # 4.5 전략 3-Way 세그먼트 컨트롤 확장: 정적 자산배분 vs 트라이포드 vs 동적 자산배분 (DAA/VAA)
     strategy_selector_old = r'<!-- Strategy 2-Way Segmented Control -->\s*<div class="inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner">.*?</div>'
     strategy_selector_new = """<!-- Strategy 3-Way Segmented Control -->
-<div class="inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner gap-1" id="strategy-mode-selector">
-  <button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md" id="mode-static" onclick="switchMode('static')" type="button">
-    <span class="material-symbols-outlined text-[18px]">account_balance</span>
-    <span>🏛️ 정적 자산배분</span>
+<div class="grid grid-cols-3 sm:inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner gap-1 w-full sm:w-auto" id="strategy-mode-selector">
+  <button class="flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md" id="mode-static" onclick="switchMode('static')" type="button">
+    <span class="material-symbols-outlined text-[16px] sm:text-[18px]">account_balance</span>
+    <span class="hidden sm:inline">정적 자산배분</span>
+    <span class="sm:hidden text-[11px] font-bold">정적</span>
   </button>
-  <button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-tripod" onclick="switchMode('tripod')" type="button">
-    <span class="material-symbols-outlined text-[18px]">bolt</span>
-    <span>⚡ 트라이포드</span>
-    <span class="ml-1 text-[10px] font-label-sm bg-secondary/15 text-secondary px-1.5 py-0.5 rounded-full font-mono">PRO</span>
+  <button class="flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-tripod" onclick="switchMode('tripod')" type="button">
+    <span class="material-symbols-outlined text-[16px] sm:text-[18px]">bolt</span>
+    <span class="hidden sm:inline">트라이포드</span>
+    <span class="sm:hidden text-[11px] font-bold">트라이포드</span>
+    <span class="hidden md:inline ml-1 text-[10px] font-label-sm bg-secondary/15 text-secondary px-1.5 py-0.5 rounded-full font-mono">PRO</span>
   </button>
-  <button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-dynamic" onclick="switchMode('dynamic')" type="button">
-    <span class="material-symbols-outlined text-[18px]">auto_graph</span>
-    <span>🦅 동적 자산배분 (DAA/VAA)</span>
-    <span class="ml-1 text-[10px] font-label-sm bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">QUANT</span>
+  <button class="flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200" id="mode-dynamic" onclick="switchMode('dynamic')" type="button">
+    <span class="material-symbols-outlined text-[16px] sm:text-[18px]">auto_graph</span>
+    <span class="hidden sm:inline">동적 (DAA/VAA)</span>
+    <span class="sm:hidden text-[11px] font-bold">동적</span>
+    <span class="hidden md:inline ml-1 text-[10px] font-label-sm bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">QUANT</span>
   </button>
 </div>"""
     b_body = re.sub(strategy_selector_old, strategy_selector_new, b_body, flags=re.DOTALL)
@@ -138,12 +142,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     # 7. 세금 섹션 개선: 해외주식 양도소득세 22% 토글 ID 및 계좌 배지 추가
     tax_section_old = r'<div class="flex items-center justify-between text-body-sm text-body-sm">\s*<label class="flex items-center gap-2 cursor-pointer">\s*<input checked="" class="w-4 h-4 rounded bg-surface-container-high text-primary-container focus:ring-0" type="checkbox"/>\s*<span class="text-on-surface">해외주식 양도소득세 22% \(연 250만 원 공제\)</span>\s*</label>\s*<span class="font-label-sm text-label-sm text-outline font-mono">선입선출\(FIFO\)</span>\s*</div>'
     tax_section_new = """<div class="flex flex-col gap-1.5 bg-surface-container p-space-sm rounded-lg">
-  <div class="flex items-center justify-between text-body-sm text-body-sm">
-    <label class="flex items-center gap-2 cursor-pointer">
-      <input checked="" id="tax-toggle" onchange="toggleTaxMode(this.checked)" class="w-4 h-4 rounded bg-surface-container-high text-primary-container focus:ring-0" type="checkbox"/>
-      <span class="text-on-surface font-semibold">해외주식 양도소득세 22% 반영</span>
+  <div class="flex items-center justify-between text-body-sm text-body-sm gap-2">
+    <label class="flex items-center gap-2 cursor-pointer truncate">
+      <input checked="" id="tax-toggle" onchange="toggleTaxMode(this.checked)" class="w-4 h-4 rounded bg-surface-container-high text-primary-container focus:ring-0 shrink-0" type="checkbox"/>
+      <span class="text-on-surface font-semibold text-xs sm:text-body-sm truncate">해외주식 양도소득세 22% 반영</span>
     </label>
-    <span class="font-label-sm text-label-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded font-mono font-bold" id="tax-badge-label">일반계좌 과세</span>
+    <span class="font-label-sm text-[10px] sm:text-label-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded font-mono font-bold whitespace-nowrap shrink-0" id="tax-badge-label">일반계좌 과세</span>
   </div>
   <div class="flex items-center justify-between text-[11px] text-outline font-mono pl-6">
     <span>연 250만 원 기본공제 차감 후 22% 분리과세</span>
@@ -657,24 +661,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
   <!-- Bottom Parameters: Top N and Momentum Lookback -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm pt-1">
-    <div class="flex items-center justify-between p-space-md bg-surface-container rounded-lg">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-space-md bg-surface-container rounded-lg">
       <div>
         <span class="block font-label-md text-xs font-semibold text-on-surface">선택 자산 개수 (Top N)</span>
         <span class="font-body-sm text-[11px] text-outline">모멘텀 최상위 매수 대상 종목 수</span>
       </div>
-      <select id="dynamic-top-n" onchange="state.dynamic.topN = parseInt(this.value);" class="bg-surface-container-lowest text-primary font-mono font-bold px-3 py-1.5 rounded-lg border border-outline/20 outline-none text-xs cursor-pointer">
+      <select id="dynamic-top-n" onchange="state.dynamic.topN = parseInt(this.value);" class="w-full sm:w-auto bg-surface-container-lowest text-primary font-mono font-bold px-3 py-1.5 rounded-lg border border-outline/20 outline-none text-xs cursor-pointer">
         <option value="1">Top 1개 (집중 투자)</option>
         <option value="2" selected>Top 2개 (균형 분산)</option>
         <option value="3">Top 3개 (안정 분산)</option>
       </select>
     </div>
 
-    <div class="flex items-center justify-between p-space-md bg-surface-container rounded-lg">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-space-md bg-surface-container rounded-lg">
       <div>
         <span class="block font-label-md text-xs font-semibold text-on-surface">모멘텀 산출 가중치 방식</span>
         <span class="font-body-sm text-[11px] text-outline">13612 가중 (12×1M + 4×3M + 2×6M + 1×12M)</span>
       </div>
-      <select id="dynamic-lookback" onchange="state.dynamic.lookbackMonths = parseInt(this.value);" class="bg-surface-container-lowest text-secondary font-mono font-bold px-3 py-1.5 rounded-lg border border-outline/20 outline-none text-xs cursor-pointer">
+      <select id="dynamic-lookback" onchange="state.dynamic.lookbackMonths = parseInt(this.value);" class="w-full sm:w-auto bg-surface-container-lowest text-secondary font-mono font-bold px-3 py-1.5 rounded-lg border border-outline/20 outline-none text-xs cursor-pointer">
         <option value="12" selected>13612 가중 모멘텀 (표준)</option>
         <option value="6">6개월 단순 모멘텀</option>
         <option value="3">3개월 단기 모멘텀</option>
@@ -783,10 +787,18 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 </div>"""
     r_body = re.sub(chart_hover_old, chart_hover_new, r_body, flags=re.DOTALL)
 
-    # 15.6.1 리포트 내 하드코딩된 트라이포드 텍스트를 모드별 동적 엘리먼트로 교체
+    # 15.6.1 리포트 내 하드코딩된 트라이포드 텍스트를 모드별 동적 엘리먼트로 교체 및 모바일 반응형 정돈
     r_body = r_body.replace(
         '<span class="font-label-sm text-label-sm text-outline font-mono">ID: TRIPOD-ALPHA-V4</span>',
         '<span id="report-strategy-id" class="font-label-sm text-label-sm text-outline font-mono">ID: QUANT-PORTFOLIO-V4</span>'
+    )
+    r_body = r_body.replace(
+        '<h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">나스닥 레버리지 트라이포드 (Tripod Alpha)</h1>',
+        '<h1 id="report-strategy-title" class="text-xl sm:text-headline-lg text-on-surface font-bold tracking-tight leading-snug">나스닥 레버리지 트라이포드 (Tripod Alpha)</h1>'
+    )
+    r_body = r_body.replace(
+        '<div class="flex flex-wrap items-center gap-space-md py-space-xs font-label-sm text-label-sm">',
+        '<div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-space-md py-space-xs font-label-sm text-[11px] sm:text-label-sm">'
     )
     r_body = r_body.replace(
         '<span class="text-on-surface font-semibold">BAS Tripod 전략 (₩14.89억)</span>',
@@ -795,6 +807,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     r_body = r_body.replace(
         '<p class="font-body-sm text-body-sm text-outline">최근 6개년 월간 트라이포드 성과 매트릭스</p>',
         '<p id="monthly-heatmap-desc" class="font-body-sm text-body-sm text-outline">월간 포트폴리오 성과 및 연간 복리 누적 매트릭스</p>'
+    )
+    r_body = r_body.replace(
+        '<span class="px-space-sm py-1 rounded bg-surface-container-high text-on-surface font-mono font-label-sm text-label-sm self-start sm:self-auto">단위: %</span>',
+        '<div class="flex items-center gap-2 self-start sm:self-auto"><span class="sm:hidden text-[10px] bg-secondary/15 text-secondary px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">👈 좌우 스크롤 12월/YTD 👉</span><span class="px-space-sm py-1 rounded bg-surface-container-high text-on-surface font-mono font-label-sm text-label-sm">단위: %</span></div>'
+    )
+    r_body = r_body.replace(
+        '<table class="w-full text-center border-collapse">',
+        '<table class="w-full min-w-[620px] text-center border-collapse">'
     )
     r_body = r_body.replace(
         '<p class="font-body-sm text-body-sm text-outline">Tripod Weight Switching Events</p>',
@@ -1193,8 +1213,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     const tripodPanel = document.getElementById('tripod-panel');
     const dynamicPanel = document.getElementById('dynamic-panel');
 
-    const activeBtnClass = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md';
-    const inactiveBtnClass = 'flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200';
+    const activeBtnClass = 'flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-all duration-200 bg-primary-container text-on-primary-container shadow-md';
+    const inactiveBtnClass = 'flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold text-on-surface-variant hover:text-on-surface transition-all duration-200';
 
     if (btnStatic) btnStatic.className = (newMode === 'static') ? activeBtnClass : inactiveBtnClass;
     if (btnTripod) btnTripod.className = (newMode === 'tripod') ? activeBtnClass : inactiveBtnClass;
@@ -3513,14 +3533,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 <!-- BUILDER VIEW -->
 <div id="view-builder" class="transition-opacity duration-300">
-  <main class="w-full">
+  <main class="w-full pt-16 sm:pt-20">
     {b_body}
   </main>
 </div>
 
 <!-- ANALYTICS REPORT VIEW -->
 <div id="view-analytics" class="hidden transition-opacity duration-300">
-  <main class="w-full px-gutter-desktop py-space-lg space-y-space-xl">
+  <main class="w-full pt-16 sm:pt-20">
     {r_body}
   </main>
 </div>
