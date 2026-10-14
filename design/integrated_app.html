@@ -345,13 +345,15 @@
       <span class="font-label-sm text-label-sm font-semibold text-on-surface">트라이포드 종목 프리셋:</span>
     </div>
     <div class="flex flex-wrap gap-1.5">
-      <button type="button" onclick="setTripodArchetype('nasdaq')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-primary font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">🚀 나스닥 100 (QLD/QQQ/TQQQ)</button>
-      <button type="button" onclick="setTripodArchetype('sp500')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-secondary font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">🛡️ S&amp;P 500 (SSO/SPY/UPRO)</button>
-      <button type="button" onclick="setTripodArchetype('semicon')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-tertiary-container font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">⚡ 반도체 (USD/SOXX/SOXL)</button>
+      <button type="button" onclick="setTripodArchetype('nasdaq')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-primary font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">🚀 나스닥 100</button>
+      <button type="button" onclick="setTripodArchetype('sp500')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-secondary font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">🛡️ S&amp;P 500</button>
+      <button type="button" onclick="setTripodArchetype('semicon')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-tertiary-container font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">⚡ 반도체</button>
+      <button type="button" onclick="setTripodArchetype('bigtech')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-primary font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">🤖 빅테크 &amp; AI</button>
+      <button type="button" onclick="setTripodArchetype('allweather')" class="px-2.5 py-1 rounded bg-surface-container-highest hover:bg-surface-bright text-outline font-label-sm text-[11px] font-bold transition-all shadow-sm active:scale-95">⚖️ 배당 &amp; 안전</button>
     </div>
   </div>
 
-  <!-- Tripod Customizable Asset Slots (4 Roles) -->
+  <!-- Tripod Customizable Asset Slots (4 Roles) with Dropdown & Input -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-sm pt-space-xs">
     <!-- Slot 1: 현금 및 안전 버퍼 -->
     <div class="p-space-sm bg-surface-container rounded-lg flex flex-col gap-2 border border-outline/10">
@@ -360,7 +362,16 @@
         <span class="material-symbols-outlined text-primary text-[16px]">shield</span>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="font-label-sm text-[11px] text-outline">투자 종목 티커</span>
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-[11px] text-outline">투자 종목 선택</span>
+          <select id="tripod-select-buffer" onchange="selectTripodSlot(this, 'buffer')" class="bg-surface-container-lowest text-primary text-[11px] font-bold rounded px-1.5 py-0.5 outline-none border border-outline/20 cursor-pointer">
+            <option value="CASH">CASH (USD 현금)</option>
+            <option value="SGOV">SGOV (초단기채)</option>
+            <option value="BIL">BIL (1-3M T-Bill)</option>
+            <option value="TLT">TLT (20Y 미국채)</option>
+            <option value="CUSTOM">직접 입력 (Custom)</option>
+          </select>
+        </div>
         <input id="tripod-asset-buffer" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase text-sm" value="CASH" placeholder="CASH"/>
       </div>
       <div class="flex items-center justify-between pt-1">
@@ -385,7 +396,16 @@
         <span class="material-symbols-outlined text-secondary text-[16px]">trending_up</span>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="font-label-sm text-[11px] text-outline">투자 종목 티커</span>
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-[11px] text-outline">투자 종목 선택</span>
+          <select id="tripod-select-core" onchange="selectTripodSlot(this, 'core')" class="bg-surface-container-lowest text-secondary text-[11px] font-bold rounded px-1.5 py-0.5 outline-none border border-outline/20 cursor-pointer">
+            <option value="QLD">QLD (나스닥 2X)</option>
+            <option value="SSO">SSO (S&amp;P500 2X)</option>
+            <option value="USD">USD (반도체 2X)</option>
+            <option value="ROM">ROM (기술주 2X)</option>
+            <option value="CUSTOM">직접 입력 (Custom)</option>
+          </select>
+        </div>
         <input id="tripod-asset-core" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-secondary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-secondary uppercase text-sm" value="QLD" placeholder="QLD"/>
       </div>
       <div class="flex items-center justify-between pt-1">
@@ -410,7 +430,17 @@
         <span class="material-symbols-outlined text-primary text-[16px]">shield_with_heart</span>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="font-label-sm text-[11px] text-outline">투자 종목 티커</span>
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-[11px] text-outline">투자 종목 선택</span>
+          <select id="tripod-select-base" onchange="selectTripodSlot(this, 'base')" class="bg-surface-container-lowest text-primary text-[11px] font-bold rounded px-1.5 py-0.5 outline-none border border-outline/20 cursor-pointer">
+            <option value="QQQ">QQQ (나스닥 100)</option>
+            <option value="SPY">SPY (S&amp;P 500)</option>
+            <option value="SOXX">SOXX (반도체 지수)</option>
+            <option value="VTI">VTI (전체 미국주식)</option>
+            <option value="SCHD">SCHD (배당성장)</option>
+            <option value="CUSTOM">직접 입력 (Custom)</option>
+          </select>
+        </div>
         <input id="tripod-asset-base" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary uppercase text-sm" value="QQQ" placeholder="QQQ"/>
       </div>
       <div class="flex items-center justify-between pt-1">
@@ -435,7 +465,17 @@
         <span class="material-symbols-outlined text-tertiary-container text-[16px]">crisis_alert</span>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="font-label-sm text-[11px] text-outline">투자 종목 티커</span>
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-[11px] text-outline">투자 종목 선택</span>
+          <select id="tripod-select-panic" onchange="selectTripodSlot(this, 'panic')" class="bg-surface-container-lowest text-tertiary-container text-[11px] font-bold rounded px-1.5 py-0.5 outline-none border border-outline/20 cursor-pointer">
+            <option value="TQQQ">TQQQ (나스닥 3X)</option>
+            <option value="UPRO">UPRO (S&amp;P500 3X)</option>
+            <option value="SOXL">SOXL (반도체 3X)</option>
+            <option value="TECL">TECL (기술주 3X)</option>
+            <option value="FNGU">FNGU (빅테크 3X)</option>
+            <option value="CUSTOM">직접 입력 (Custom)</option>
+          </select>
+        </div>
         <input id="tripod-asset-panic" oninput="handleTripodAssetChange()" class="w-full bg-surface-container-lowest font-mono font-bold text-tertiary-container px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-tertiary-container uppercase text-sm" value="TQQQ" placeholder="TQQQ"/>
       </div>
       <div class="flex items-center justify-between pt-1">
@@ -464,7 +504,7 @@
       </div>
       <span class="font-headline-sm text-[16px] font-bold text-on-surface">상시 현금비중 &amp; 스위칭</span>
       <p class="font-body-sm text-[12px] text-on-surface-variant leading-snug">
-        기본 현금 버퍼 <span id="tripod-card-bufpct" class="font-bold text-primary">30.0%</span> 유지. 변동성 지표(VIX &gt; 28) 진입 시 <strong id="tripod-card-core1" class="text-secondary font-bold">QLD</strong>에서 <strong id="tripod-card-base1" class="text-primary font-bold">QQQ</strong>로 자동 하향 디레버리징.
+        기본 현금 버퍼 <span id="tripod-card-bufpct" class="font-bold text-primary">30.0%</span> 유지. 변동성 지표(VIX &gt; <span id="tripod-card-vix" class="text-primary font-bold">28.0</span>) 진입 시 <strong id="tripod-card-core1" class="text-secondary font-bold">QLD</strong>에서 <strong id="tripod-card-base1" class="text-primary font-bold">QQQ</strong>로 자동 하향 디레버리징.
       </p>
       <div class="mt-auto pt-2 flex items-center justify-between font-label-sm text-label-sm">
         <span class="text-outline">기본 현금 버퍼</span>
@@ -479,11 +519,11 @@
       </div>
       <span class="font-headline-sm text-[16px] font-bold text-on-surface">MDD 분할매수 사다리</span>
       <p class="font-body-sm text-[12px] text-on-surface-variant leading-snug">
-        고점 대비 낙폭 도달 시 유보현금 3분할 집행: -10%(1배수 <strong id="tripod-card-base2" class="text-primary font-bold">QQQ</strong>), -20%(1.5배수 <strong id="tripod-card-core2" class="text-secondary font-bold">QLD</strong>), -30%(2.5배수 <strong id="tripod-card-panic2" class="text-tertiary-container font-bold">TQQQ</strong>).
+        고점 대비 낙폭 도달 시 유보현금 3분할 집행: <span id="tripod-card-drops-desc">-10%(1배수 QQQ), -20%(1.5배수 QLD), -30%(2.5배수 TQQQ)</span>.
       </p>
       <div class="mt-auto pt-2 flex items-center justify-between font-label-sm text-label-sm">
         <span class="text-outline">낙폭 트리거</span>
-        <span class="text-secondary font-mono font-bold">-10% / -20% / -30%</span>
+        <span id="tripod-card-drops" class="text-secondary font-mono font-bold">-10% / -20% / -30%</span>
       </div>
     </div>
     <!-- Axis 3 -->
@@ -494,11 +534,11 @@
       </div>
       <span class="font-headline-sm text-[16px] font-bold text-on-surface">RSI 과매도 공포 탐지</span>
       <p class="font-body-sm text-[12px] text-on-surface-variant leading-snug">
-        일봉 RSI(14) &lt; 30 도달 시 극단적 시장 과매도로 판정, 잔여 유동성을 <strong id="tripod-card-panic3" class="text-tertiary-container font-bold">TQQQ</strong>로 일괄 풀베팅 전개.
+        일봉 RSI(14) &lt; <span id="tripod-card-rsi-val" class="font-bold text-tertiary-container">30.0</span> 도달 시 극단적 시장 과매도로 판정, 잔여 유동성을 <strong id="tripod-card-panic3" class="text-tertiary-container font-bold">TQQQ</strong>로 일괄 풀베팅 전개.
       </p>
       <div class="mt-auto pt-2 flex items-center justify-between font-label-sm text-label-sm">
         <span class="text-outline">RSI 임계값</span>
-        <span class="text-tertiary-container font-mono font-bold">&lt; 30.0 (Extreme)</span>
+        <span id="tripod-card-rsi" class="text-tertiary-container font-mono font-bold">&lt; 30.0 (Extreme)</span>
       </div>
     </div>
   </div>
@@ -508,7 +548,7 @@
       <span class="material-symbols-outlined text-secondary text-[16px]">verified</span>
       <span class="font-body-sm text-body-sm text-on-surface">1999 닷컴버블, 2008 금융위기 씬에 대한 생존성 검증 통과 (생존율 99.4%)</span>
     </div>
-    <button class="font-label-sm text-label-sm text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer" onclick="showTripodTuneModal()" type="button">파라미터 세부 튜닝 <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>
+    <button id="btn-open-tripod-tune-modal" class="font-label-sm text-label-sm text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer" onclick="showTripodTuneModal()" type="button">파라미터 세부 튜닝 <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>
   </div>
 </div>
 <!-- BOTTOM ACTION WORKBAR -->
@@ -532,6 +572,168 @@
 </div>
 </div>
 </div>
+</div>
+
+<!-- Tripod Parameter Tuning Modal -->
+<div id="tripod-tune-modal" onclick="if(event.target === this) closeTripodTuneModal()" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto hidden">
+  <div class="bg-surface-container border border-outline/30 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+    <!-- Header -->
+    <div class="p-space-md border-b border-outline/20 flex justify-between items-center bg-surface-container-high/40">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary text-[24px]">tune</span>
+        <div>
+          <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">
+            트라이포드 퀀트 알고리즘 파라미터 정밀 튜닝
+          </h3>
+          <p class="font-label-sm text-label-sm text-outline mt-0.5">
+            변동성 방어, 낙폭 사다리 매수, RSI 공포 탐지의 작동 임계값을 직접 제어합니다.
+          </p>
+        </div>
+      </div>
+      <button id="btn-close-tripod-tune-modal" onclick="closeTripodTuneModal()" class="text-outline hover:text-on-surface p-1.5 rounded-lg transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-[22px]">close</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="overflow-y-auto p-space-md flex-1 space-y-space-md custom-scrollbar">
+      <!-- Section 1: BUFFER & VIX DEFENSE -->
+      <div class="p-space-md bg-surface-container-low rounded-xl border border-outline/10 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[18px]">shield</span>
+            <span class="font-headline-sm text-[15px] font-bold text-on-surface">제1축 · 버퍼 자산 &amp; VIX 방어 스위칭</span>
+          </div>
+          <span class="font-label-sm text-[11px] font-mono text-primary font-bold">VIX / SMA / 밴드</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-body-sm">
+          <div>
+            <label class="block font-label-sm text-[11px] text-outline mb-1">VIX 변동성 피난 임계치 (VIX &gt; Threshold)</label>
+            <div class="flex items-center gap-2">
+              <input type="number" id="tune-vix" min="15" max="50" step="0.5" class="w-24 bg-surface-container-lowest font-mono font-bold text-primary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary text-sm" value="28.0"/>
+              <span class="text-outline text-xs">포인트 (Core → Base 디레버리징)</span>
+            </div>
+          </div>
+          <div>
+            <label class="block font-label-sm text-[11px] text-outline mb-1">리밸런싱 밴드 허용오차 (±%p)</label>
+            <div class="flex items-center gap-2">
+              <input type="number" id="tune-reb-tol" min="1" max="20" step="0.5" class="w-24 bg-surface-container-lowest font-mono font-bold text-on-surface px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-primary text-sm" value="5.0"/>
+              <span class="text-outline text-xs">%p (이탈 시 즉시 리밸런싱)</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <span class="font-label-sm text-[12px] text-on-surface">200일 이동평균선(SMA 200) 하향이탈 추세필터</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="tune-sma" class="sr-only peer" checked/>
+            <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 2: MILESTONE 낙폭 사다리 매수 -->
+      <div class="p-space-md bg-surface-container-low rounded-xl border border-outline/10 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary text-[18px]">trending_down</span>
+            <span class="font-headline-sm text-[15px] font-bold text-on-surface">제2축 · MDD 고점대비 낙폭 사다리 분할매수</span>
+          </div>
+          <span class="font-label-sm text-[11px] font-mono text-secondary font-bold">3-Stage Milestone</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-body-sm">
+          <div class="p-2.5 bg-surface-container rounded-lg">
+            <span class="block font-label-sm text-[11px] font-bold text-primary mb-1">1단계 (Base 1X)</span>
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-outline">낙폭:</span>
+                <input type="number" id="tune-ladder1-drop" class="w-16 bg-surface-container-lowest font-mono font-bold text-primary px-1 py-0.5 rounded text-right text-xs" value="-10"/>
+                <span class="text-outline">%</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-outline">투입:</span>
+                <input type="number" id="tune-ladder1-alloc" class="w-16 bg-surface-container-lowest font-mono font-bold text-on-surface px-1 py-0.5 rounded text-right text-xs" value="30"/>
+                <span class="text-outline">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-2.5 bg-surface-container rounded-lg">
+            <span class="block font-label-sm text-[11px] font-bold text-secondary mb-1">2단계 (Core 2X)</span>
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-outline">낙폭:</span>
+                <input type="number" id="tune-ladder2-drop" class="w-16 bg-surface-container-lowest font-mono font-bold text-secondary px-1 py-0.5 rounded text-right text-xs" value="-20"/>
+                <span class="text-outline">%</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-outline">투입:</span>
+                <input type="number" id="tune-ladder2-alloc" class="w-16 bg-surface-container-lowest font-mono font-bold text-on-surface px-1 py-0.5 rounded text-right text-xs" value="30"/>
+                <span class="text-outline">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-2.5 bg-surface-container rounded-lg">
+            <span class="block font-label-sm text-[11px] font-bold text-tertiary-container mb-1">3단계 (Panic 3X)</span>
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-outline">낙폭:</span>
+                <input type="number" id="tune-ladder3-drop" class="w-16 bg-surface-container-lowest font-mono font-bold text-tertiary-container px-1 py-0.5 rounded text-right text-xs" value="-30"/>
+                <span class="text-outline">%</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-outline">투입:</span>
+                <input type="number" id="tune-ladder3-alloc" class="w-16 bg-surface-container-lowest font-mono font-bold text-on-surface px-1 py-0.5 rounded text-right text-xs" value="40"/>
+                <span class="text-outline">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: PANIC BUY RSI 공포 탐지 -->
+      <div class="p-space-md bg-surface-container-low rounded-xl border border-outline/10 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-tertiary-container text-[18px]">crisis_alert</span>
+            <span class="font-headline-sm text-[15px] font-bold text-on-surface">제3축 · RSI(14) 극단 과매도 공포 &amp; 과열 익절</span>
+          </div>
+          <span class="font-label-sm text-[11px] font-mono text-tertiary-container font-bold">RSI(14) Oscillator</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-body-sm">
+          <div>
+            <label class="block font-label-sm text-[11px] text-outline mb-1">극단 과매도 패닉바이 트리거 (RSI &lt; X)</label>
+            <div class="flex items-center gap-2">
+              <input type="number" id="tune-rsi-panic" min="15" max="45" step="1" class="w-24 bg-surface-container-lowest font-mono font-bold text-tertiary-container px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-tertiary-container text-sm" value="30"/>
+              <span class="text-outline text-xs">이하 시 잔여 현금 풀베팅</span>
+            </div>
+          </div>
+          <div>
+            <label class="block font-label-sm text-[11px] text-outline mb-1">고점 과열 분할익절 트리거 (RSI &gt; X)</label>
+            <div class="flex items-center gap-2">
+              <input type="number" id="tune-rsi-overbought" min="60" max="85" step="1" class="w-24 bg-surface-container-lowest font-mono font-bold text-secondary px-2.5 py-1.5 rounded outline-none focus:ring-1 focus:ring-secondary text-sm" value="70"/>
+              <span class="text-outline text-xs">이상 시 3X 수익 실현</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Action Buttons -->
+    <div class="p-space-md border-t border-outline/20 flex items-center justify-between bg-surface-container-high/40">
+      <button type="button" onclick="resetTripodTuneDefaults()" class="px-3 py-1.5 rounded-lg text-outline hover:text-on-surface font-label-sm text-label-sm flex items-center gap-1 transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+        <span>기본값 복원</span>
+      </button>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="closeTripodTuneModal()" class="px-4 py-1.5 rounded-lg bg-surface-container-highest hover:bg-surface-bright text-on-surface font-label-sm text-label-sm font-semibold transition-all cursor-pointer">
+          취소
+        </button>
+        <button id="btn-save-tripod-params" type="button" onclick="saveAndApplyTripodTuneParams()" class="px-4 py-1.5 rounded-lg bg-secondary text-on-secondary font-label-sm text-label-sm font-bold flex items-center gap-1 transition-all shadow-md active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">check</span>
+          <span>파라미터 저장 및 적용</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
   </main>
@@ -1260,6 +1462,19 @@
       panic: 'TQQQ',
       panicWeight: 10
     },
+    tripodParams: {
+      vixThreshold: 28.0,
+      bandTolerance: 5.0,
+      useSmaFilter: true,
+      ladder1Drop: -10,
+      ladder1Alloc: 30,
+      ladder2Drop: -20,
+      ladder2Alloc: 30,
+      ladder3Drop: -30,
+      ladder3Alloc: 40,
+      rsiPanic: 30,
+      rsiOverbought: 70
+    },
     taxEnabled: true
   };
 
@@ -1348,8 +1563,27 @@
       state.tripod = { buffer: 'CASH', bufferWeight: 30, core: 'SSO', coreWeight: 40, base: 'SPY', baseWeight: 20, panic: 'UPRO', panicWeight: 10 };
     } else if (type === 'semicon') {
       state.tripod = { buffer: 'CASH', bufferWeight: 30, core: 'USD', coreWeight: 40, base: 'SOXX', baseWeight: 20, panic: 'SOXL', panicWeight: 10 };
+    } else if (type === 'bigtech') {
+      state.tripod = { buffer: 'CASH', bufferWeight: 30, core: 'ROM', coreWeight: 40, base: 'QQQ', baseWeight: 20, panic: 'FNGU', panicWeight: 10 };
+    } else if (type === 'allweather') {
+      state.tripod = { buffer: 'BIL', bufferWeight: 30, core: 'SSO', coreWeight: 30, base: 'SCHD', baseWeight: 25, panic: 'UPRO', panicWeight: 15 };
     }
     syncTripodInputsFromState();
+  }
+
+  function selectTripodSlot(sel, slot) {
+    if (!sel) return;
+    const val = sel.value;
+    const input = document.getElementById(`tripod-asset-${slot}`);
+    if (val === 'CUSTOM') {
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    } else {
+      if (input) input.value = val;
+      setTripodSlotTicker(slot, val);
+    }
   }
 
   function setTripodSlotTicker(slot, ticker) {
@@ -1378,6 +1612,29 @@
     if (elCoreW) elCoreW.value = state.tripod.coreWeight;
     if (elBaseW) elBaseW.value = state.tripod.baseWeight;
     if (elPanicW) elPanicW.value = state.tripod.panicWeight;
+
+    // 동적 select 드롭다운 선택값 동기화
+    ['buffer', 'core', 'base', 'panic'].forEach(slot => {
+      const sel = document.getElementById(`tripod-select-${slot}`);
+      if (!sel) return;
+      const targetTicker = state.tripod[slot];
+      let matched = false;
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === targetTicker) {
+          sel.selectedIndex = i;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === 'CUSTOM') {
+            sel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    });
 
     handleTripodAssetChange();
     handleTripodWeightChange();
@@ -1442,6 +1699,20 @@
 
   function updateTripodCardsUI() {
     const t = state.tripod;
+    const p = state.tripodParams || {
+      vixThreshold: 28.0,
+      bandTolerance: 5.0,
+      useSmaFilter: true,
+      ladder1Drop: -10,
+      ladder1Alloc: 30,
+      ladder2Drop: -20,
+      ladder2Alloc: 30,
+      ladder3Drop: -30,
+      ladder3Alloc: 40,
+      rsiPanic: 30,
+      rsiOverbought: 70
+    };
+
     const cBufPct = document.getElementById('tripod-card-bufpct');
     const cBufBtm = document.getElementById('tripod-card-buf-bottom');
     const cCore1 = document.getElementById('tripod-card-core1');
@@ -1459,6 +1730,26 @@
     if (cCore2) cCore2.textContent = t.core;
     if (cPanic2) cPanic2.textContent = t.panic;
     if (cPanic3) cPanic3.textContent = t.panic;
+
+    // 동적 알고리즘 파라미터 텍스트 실시간 반영
+    const cardVix = document.getElementById('tripod-card-vix');
+    if (cardVix) cardVix.textContent = p.vixThreshold.toFixed(1);
+
+    const cardDropsDesc = document.getElementById('tripod-card-drops-desc');
+    if (cardDropsDesc) {
+      cardDropsDesc.textContent = `${p.ladder1Drop}%(1배수 ${t.base}), ${p.ladder2Drop}%(1.5배수 ${t.core}), ${p.ladder3Drop}%(2.5배수 ${t.panic})`;
+    }
+
+    const cardDrops = document.getElementById('tripod-card-drops');
+    if (cardDrops) {
+      cardDrops.textContent = `${p.ladder1Drop}% / ${p.ladder2Drop}% / ${p.ladder3Drop}%`;
+    }
+
+    const cardRsiVal = document.getElementById('tripod-card-rsi-val');
+    if (cardRsiVal) cardRsiVal.textContent = p.rsiPanic.toFixed(1);
+
+    const cardRsi = document.getElementById('tripod-card-rsi');
+    if (cardRsi) cardRsi.textContent = `< ${p.rsiPanic.toFixed(1)} (Extreme)`;
   }
 
   // --- 밴드 리밸런싱 기능 켜기/끄기 ---
@@ -1865,6 +2156,7 @@
       bandVal: state.bandEnabled ? (document.getElementById('band-slider')?.value || '5.0') : 'disabled',
       assets: state.assets,
       tripod: state.tripod,
+      tripodParams: state.tripodParams,
       taxEnabled: state.taxEnabled
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1896,11 +2188,89 @@
   }
 
   function showTripodTuneModal() {
-    alert("【나스닥 레버리지 트라이포드 3대 축 알고리즘】\n\n"
-      + "1. 제1축 BUFFER: 상시 현금 버퍼 " + state.tripod.bufferWeight + "% 유지. VIX > 28 진입 시 " + state.tripod.core + "에서 " + state.tripod.base + "로 하향 디레버리징\n"
-      + "2. 제2축 MILESTONE: MDD -10%(" + state.tripod.base + " 1배수), -20%(" + state.tripod.core + " 1.5배수), -30%(" + state.tripod.panic + " 2.5배수) 분할 집행\n"
-      + "3. 제3축 PANIC BUY: 일봉 RSI(14) < 30 극단 과매도 시 " + state.tripod.panic + " 풀베팅\n\n"
-      + "* 트라이포드 상단 패널에서 4개 투자 종목과 목표 비중을 자유롭게 커스텀할 수 있습니다.");
+    const modal = document.getElementById('tripod-tune-modal');
+    if (!modal) return;
+    const p = state.tripodParams;
+
+    const elVix = document.getElementById('tune-vix');
+    const elReb = document.getElementById('tune-reb-tol');
+    const elSma = document.getElementById('tune-sma');
+    const elL1Drop = document.getElementById('tune-ladder1-drop');
+    const elL1Alloc = document.getElementById('tune-ladder1-alloc');
+    const elL2Drop = document.getElementById('tune-ladder2-drop');
+    const elL2Alloc = document.getElementById('tune-ladder2-alloc');
+    const elL3Drop = document.getElementById('tune-ladder3-drop');
+    const elL3Alloc = document.getElementById('tune-ladder3-alloc');
+    const elRsiPanic = document.getElementById('tune-rsi-panic');
+    const elRsiOver = document.getElementById('tune-rsi-overbought');
+
+    if (elVix) elVix.value = p.vixThreshold;
+    if (elReb) elReb.value = p.bandTolerance;
+    if (elSma) elSma.checked = !!p.useSmaFilter;
+    if (elL1Drop) elL1Drop.value = p.ladder1Drop;
+    if (elL1Alloc) elL1Alloc.value = p.ladder1Alloc;
+    if (elL2Drop) elL2Drop.value = p.ladder2Drop;
+    if (elL2Alloc) elL2Alloc.value = p.ladder2Alloc;
+    if (elL3Drop) elL3Drop.value = p.ladder3Drop;
+    if (elL3Alloc) elL3Alloc.value = p.ladder3Alloc;
+    if (elRsiPanic) elRsiPanic.value = p.rsiPanic;
+    if (elRsiOver) elRsiOver.value = p.rsiOverbought;
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeTripodTuneModal() {
+    const modal = document.getElementById('tripod-tune-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function resetTripodTuneDefaults() {
+    const defaults = {
+      vixThreshold: 28.0,
+      bandTolerance: 5.0,
+      useSmaFilter: true,
+      ladder1Drop: -10,
+      ladder1Alloc: 30,
+      ladder2Drop: -20,
+      ladder2Alloc: 30,
+      ladder3Drop: -30,
+      ladder3Alloc: 40,
+      rsiPanic: 30,
+      rsiOverbought: 70
+    };
+    state.tripodParams = { ...defaults };
+    showTripodTuneModal();
+  }
+
+  function saveAndApplyTripodTuneParams() {
+    const elVix = document.getElementById('tune-vix');
+    const elReb = document.getElementById('tune-reb-tol');
+    const elSma = document.getElementById('tune-sma');
+    const elL1Drop = document.getElementById('tune-ladder1-drop');
+    const elL1Alloc = document.getElementById('tune-ladder1-alloc');
+    const elL2Drop = document.getElementById('tune-ladder2-drop');
+    const elL2Alloc = document.getElementById('tune-ladder2-alloc');
+    const elL3Drop = document.getElementById('tune-ladder3-drop');
+    const elL3Alloc = document.getElementById('tune-ladder3-alloc');
+    const elRsiPanic = document.getElementById('tune-rsi-panic');
+    const elRsiOver = document.getElementById('tune-rsi-overbought');
+
+    state.tripodParams = {
+      vixThreshold: parseFloat(elVix?.value) || 28.0,
+      bandTolerance: parseFloat(elReb?.value) || 5.0,
+      useSmaFilter: elSma ? elSma.checked : true,
+      ladder1Drop: parseFloat(elL1Drop?.value) || -10,
+      ladder1Alloc: parseFloat(elL1Alloc?.value) || 30,
+      ladder2Drop: parseFloat(elL2Drop?.value) || -20,
+      ladder2Alloc: parseFloat(elL2Alloc?.value) || 30,
+      ladder3Drop: parseFloat(elL3Drop?.value) || -30,
+      ladder3Alloc: parseFloat(elL3Alloc?.value) || 40,
+      rsiPanic: parseFloat(elRsiPanic?.value) || 30,
+      rsiOverbought: parseFloat(elRsiOver?.value) || 70
+    };
+
+    updateTripodCardsUI();
+    closeTripodTuneModal();
   }
 
   function showNotificationToast() {
@@ -2272,7 +2642,8 @@
       bandEnabled: state.bandEnabled,
       bandVal: state.bandVal,
       assets: state.assets,
-      tripod: state.tripod
+      tripod: state.tripod,
+      tripodParams: state.tripodParams
     };
 
     try {

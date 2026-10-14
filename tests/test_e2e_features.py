@@ -199,8 +199,128 @@ def test_e2e_features():
         page.screenshot(path=final_screenshot, full_page=True)
         print(f"Final report verified screenshot saved to {final_screenshot}", flush=True)
 
+        # =========================================================================
+        # 10. 트라이포드 전략 종목 선택 및 파라미터 세부 튜닝 검증
+        # =========================================================================
+        print("11. Testing Tripod Strategy Mode and Custom Assets...", flush=True)
+        # 상단 네비게이션을 통해 Builder View로 복귀
+        target_frame.evaluate("window.scrollTo(0, 0)")
+        nav_builder = target_frame.locator("#nav-btn-builder")
+        nav_builder.dispatch_event("click")
+        time.sleep(1)
+
+        # 트라이포드 모드 탭 전환
+        btn_mode_tripod = target_frame.locator("#mode-tripod")
+        btn_mode_tripod.dispatch_event("click")
+        time.sleep(1)
+
+        # 단일 뷰 검증: static 패널은 hidden이고 tripod 패널이 보여야 함
+        static_panel = target_frame.locator("#static-panel")
+        tripod_panel = target_frame.locator("#tripod-panel")
+        assert "hidden" in static_panel.get_attribute("class"), "Static panel should be hidden in tripod mode"
+        assert "hidden" not in tripod_panel.get_attribute("class"), "Tripod panel should be visible in tripod mode"
+        print("Tripod single view mode verified successfully!", flush=True)
+
+        # 10.1 트라이포드 프리셋 버튼 테스트 (반도체 프리셋 클릭)
+        print("12. Testing Tripod Archetype Preset (Semiconductor)...", flush=True)
+        btn_semicon = tripod_panel.locator("button:has-text('반도체')")
+        btn_semicon.dispatch_event("click")
+        time.sleep(0.5)
+
+        val_core = target_frame.locator("#tripod-asset-core").input_value()
+        val_panic = target_frame.locator("#tripod-asset-panic").input_value()
+        val_base = target_frame.locator("#tripod-asset-base").input_value()
+        print(f"Semicon Preset Values -> Core: {val_core}, Panic: {val_panic}, Base: {val_base}", flush=True)
+        assert val_core == "USD", f"Core should be USD, got {val_core}"
+        assert val_panic == "SOXL", f"Panic should be SOXL, got {val_panic}"
+        assert val_base == "SOXX", f"Base should be SOXX, got {val_base}"
+
+        # 10.2 트라이포드 4대 슬롯 드롭다운 선택상자 테스트
+        print("13. Testing Tripod Asset Slot Select Dropdowns...", flush=True)
+        sel_buffer = target_frame.locator("#tripod-select-buffer")
+        sel_core = target_frame.locator("#tripod-select-core")
+        sel_panic = target_frame.locator("#tripod-select-panic")
+
+        sel_buffer.select_option("SGOV")
+        sel_core.select_option("QLD")
+        sel_panic.select_option("TQQQ")
+        time.sleep(0.5)
+
+        assert target_frame.locator("#tripod-asset-buffer").input_value() == "SGOV", "Buffer input should sync to SGOV"
+        assert target_frame.locator("#tripod-asset-core").input_value() == "QLD", "Core input should sync to QLD"
+        assert target_frame.locator("#tripod-asset-panic").input_value() == "TQQQ", "Panic input should sync to TQQQ"
+        print("Tripod asset slot dropdown sync verified successfully!", flush=True)
+
+        # 10.3 트라이포드 파라미터 세부 튜닝 모달 오픈 및 값 변경
+        print("14. Testing Tripod Parameter Tuning Modal...", flush=True)
+        btn_open_tune = target_frame.locator("#btn-open-tripod-tune-modal")
+        tune_modal = target_frame.locator("#tripod-tune-modal")
+        assert "hidden" in tune_modal.get_attribute("class"), "Tune modal should be hidden initially"
+
+        btn_open_tune.dispatch_event("click")
+        time.sleep(0.5)
+        assert "hidden" not in tune_modal.get_attribute("class"), "Tune modal should be visible after clicking open"
+        print("Tripod tune modal opened successfully!", flush=True)
+
+        # 모달 열린 상태 스크린샷 캡처
+        modal_tune_screenshot = os.path.join(artifact_dir, "tripod_tune_modal_opened.png")
+        page.screenshot(path=modal_tune_screenshot, full_page=True)
+        print(f"Tune modal screenshot saved to {modal_tune_screenshot}", flush=True)
+
+        # 파라미터 값 변경 (VIX 28.0 -> 32.0, 낙폭 사다리 -12% / -22% / -32%, RSI 30 -> 25)
+        input_vix = target_frame.locator("#tune-vix")
+        input_l1_drop = target_frame.locator("#tune-ladder1-drop")
+        input_l2_drop = target_frame.locator("#tune-ladder2-drop")
+        input_l3_drop = target_frame.locator("#tune-ladder3-drop")
+        input_rsi_panic = target_frame.locator("#tune-rsi-panic")
+
+        input_vix.fill("32.0")
+        input_l1_drop.fill("-12")
+        input_l2_drop.fill("-22")
+        input_l3_drop.fill("-32")
+        input_rsi_panic.fill("25")
+        time.sleep(0.5)
+
+        # 파라미터 저장 및 적용 클릭
+        btn_save_params = target_frame.locator("#btn-save-tripod-params")
+        btn_save_params.dispatch_event("click")
+        time.sleep(0.5)
+        assert "hidden" in tune_modal.get_attribute("class"), "Tune modal should close after save"
+        print("Tripod tune modal saved and closed successfully!", flush=True)
+
+        # 10.4 3대 축 카드 UI에 실시간 변경된 파라미터 반영 검증
+        print("15. Verifying dynamic Tripod 3-Axis cards UI updates...", flush=True)
+        card_vix_text = target_frame.locator("#tripod-card-vix").text_content().strip()
+        card_drops_text = target_frame.locator("#tripod-card-drops").text_content().strip()
+        card_rsi_val_text = target_frame.locator("#tripod-card-rsi-val").text_content().strip()
+        card_rsi_text = target_frame.locator("#tripod-card-rsi").text_content().strip()
+
+        print(f"Updated Tripod Cards -> VIX: {card_vix_text}, Drops: {card_drops_text}, RSI: {card_rsi_text}", flush=True)
+        assert card_vix_text == "32.0", f"Card VIX should be updated to 32.0: got {card_vix_text}"
+        assert card_drops_text == "-12% / -22% / -32%", f"Card Drops should be -12% / -22% / -32%: got {card_drops_text}"
+        assert card_rsi_val_text == "25.0", f"Card RSI val should be 25.0: got {card_rsi_val_text}"
+        assert "< 25.0" in card_rsi_text, f"Card RSI text should contain < 25.0: got {card_rsi_text}"
+
+        # 트라이포드 세부 튜닝 완료 화면 스크린샷 캡처
+        tripod_verified_screenshot = os.path.join(artifact_dir, "tripod_param_tuning_verified.png")
+        page.screenshot(path=tripod_verified_screenshot, full_page=True)
+        print(f"Tripod verified screenshot saved to {tripod_verified_screenshot}", flush=True)
+
+        # 10.5 트라이포드 시뮬레이션 실행 및 리포트 검증
+        print("16. Running Tripod simulation with tuned parameters...", flush=True)
+        target_frame.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        run_btn = target_frame.locator("#btn-run-simulation")
+        run_btn.dispatch_event("click")
+        target_frame.locator("#kpi-cagr").wait_for(state="visible", timeout=35000)
+        time.sleep(2)
+
+        tripod_cagr = target_frame.locator("#kpi-cagr").text_content().strip()
+        tripod_mdd = target_frame.locator("#kpi-mdd").text_content().strip()
+        print(f"Tripod Simulation Result -> CAGR: {tripod_cagr}, MDD: {tripod_mdd}", flush=True)
+        assert tripod_cagr != "" and "%" in tripod_cagr, f"Tripod CAGR should be rendered: {tripod_cagr}"
+
         browser.close()
-        print("All Report Interactive Buttons and Features Passed Successfully!", flush=True)
+        print("All Report Interactive Buttons, Tripod Dropdowns, and Parameter Tuning Features Passed Successfully!", flush=True)
 
 if __name__ == "__main__":
     test_e2e_features()
