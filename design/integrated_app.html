@@ -1174,6 +1174,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 <!-- Interactive Crosshair & Dot -->
 <line id="chart-crosshair-line" x1="-100" x2="-100" y1="0" y2="320" stroke="#478fff" stroke-dasharray="3 3" stroke-width="1.5" opacity="0"></line>
 <circle id="chart-crosshair-dot" cx="-100" cy="-100" r="5" fill="#478fff" stroke="#ffffff" stroke-width="2" opacity="0"></circle>
+<!-- Dynamic Y-Axis Labels -->
+<g id="chart-y-labels" class="font-mono text-[10px] select-none" fill="#8b909f" text-anchor="end">
+  <text x="990" y="24" id="y-label-top">₩15.0억 (+450%)</text>
+  <text x="990" y="84" id="y-label-upper">₩10.0억 (+300%)</text>
+  <text x="990" y="144" id="y-label-mid">₩5.0억 (+150%)</text>
+  <text x="990" y="204" id="y-label-lower">₩2.5억 (+50%)</text>
+  <text x="990" y="256" id="y-label-base" fill="#acc7ff" font-weight="bold">₩1.0억 (원금 0%)</text>
+</g>
 </svg>
 <!-- Interactive Floating Hover Tooltip -->
 <div id="chart-interactive-tooltip" class="absolute bg-surface-container-highest/95 backdrop-blur-md p-space-sm rounded-lg shadow-2xl text-left pointer-events-none transition-all duration-75 border border-outline/20 opacity-0 z-30" style="left: 0px; top: 0px; transform: translate(-50%, -125%); min-width: 190px;">
@@ -3020,44 +3028,75 @@ ${errText}
     const mddPoints = [];
     const benchMddPoints = [];
 
+    if (midDot1) midDot1.style.display = 'none';
+    if (midDot2) midDot2.style.display = 'none';
+
+    // 베이스라인 Y좌표 체계 (기준선: y=260, 상단 상한선: y=25, 하단 손실구간: y=300)
+    const Y_BASE = 260.0;
+    const Y_TOP = 25.0;
+    const Y_BOTTOM = 300.0;
+    const H_PROFIT = Y_BASE - Y_TOP;      // 235px (이익 상승 구간)
+    const H_LOSS = Y_BOTTOM - Y_BASE;     // 40px (원금 손실 하락 구간)
+
+    let maxMultiplier = 1.2;
+    let minMultiplier = 1.0;
+    let p0Wealth = 100000000;
+
     if (ptsToRender.length > 5) {
       state.activeRenderedPoints = ptsToRender;
-      const p0Wealth = ptsToRender[0].wealth || 1;
+      p0Wealth = ptsToRender[0].wealth || 100000000;
       const s0Ret = ptsToRender[0].benchReturnPct || 0;
 
-      const basNorm = ptsToRender.map(p => Math.max(0.01, p.wealth / p0Wealth));
-      const spyNorm = ptsToRender.map(p => Math.max(0.01, 1.0 + (p.benchReturnPct - s0Ret) / 100.0));
-      const maxVal = Math.max(...basNorm, ...spyNorm, 1.15) * 1.05;
-      const minVal = Math.min(0.85, Math.min(...basNorm, ...spyNorm) * 0.95);
-      const logMax = Math.log(Math.max(1.1, maxVal));
-      const logMin = Math.log(Math.max(0.1, minVal));
-      const logSpan = Math.max(0.1, logMax - logMin);
-
+      const basVals = ptsToRender.map(p => (p.wealth || p0Wealth) / p0Wealth);
+      const spyVals = ptsToRender.map(p => {
+        if (p.benchWealth && ptsToRender[0].benchWealth) {
+          return p.benchWealth / ptsToRender[0].benchWealth;
+        }
+        return Math.max(0.1, 1.0 + ((p.benchReturnPct || 0) - s0Ret) / 100.0);
+      });
+      
       const n = ptsToRender.length;
+      const rfVals = [];
+      const kospiVals = [];
+      for (let i = 0; i < n; i++) {
+        const tY = (ptsToRender[i].timestamp - ptsToRender[0].timestamp) / (365.25 * 24 * 3600 * 1000);
+        rfVals.push(Math.pow(1.05, Math.max(0, tY)));
+        kospiVals.push(Math.max(0.3, 1.0 + (spyVals[i] - 1.0) * 0.45));
+      }
+
+      maxMultiplier = Math.max(...basVals, ...spyVals, ...rfVals, 1.15) * 1.03;
+      minMultiplier = Math.min(...basVals, ...spyVals, 0.95);
+      if (minMultiplier > 0.98) minMultiplier = 0.98;
+
+      const logMax = Math.log(maxMultiplier);
+      const logMin = Math.log(minMultiplier);
+
+      const mapValueToY = (v) => {
+        if (v >= 1.0) {
+          if (scale === 'log') {
+            const ratio = Math.log(v) / Math.max(0.001, logMax);
+            return Y_BASE - Math.min(1.0, ratio) * H_PROFIT;
+          } else {
+            const ratio = (v - 1.0) / Math.max(0.001, maxMultiplier - 1.0);
+            return Y_BASE - Math.min(1.0, ratio) * H_PROFIT;
+          }
+        } else {
+          if (scale === 'log') {
+            const ratio = Math.log(v) / Math.min(-0.001, logMin);
+            return Y_BASE + Math.min(1.0, Math.abs(ratio)) * H_LOSS;
+          } else {
+            const ratio = (1.0 - v) / Math.max(0.001, 1.0 - minMultiplier);
+            return Y_BASE + Math.min(1.0, ratio) * H_LOSS;
+          }
+        }
+      };
+
       for (let i = 0; i < n; i++) {
         const x = Math.round((i / (n - 1)) * 1000);
-        const vBas = basNorm[i];
-        const vSpy = spyNorm[i];
-        const vKospi = Math.max(0.2, 1.0 + (vSpy - 1.0) * 0.45);
-        const vRf = 1.0 + (i / (n - 1)) * 0.05 * (n / 252);
-
-        let yBas, ySpy, yKospi, yRf;
-        if (scale === 'log') {
-          yBas = 260 - ((Math.log(Math.max(0.1, vBas)) - logMin) / logSpan) * 225;
-          ySpy = 260 - ((Math.log(Math.max(0.1, vSpy)) - logMin) / logSpan) * 225;
-          yKospi = 260 - ((Math.log(Math.max(0.1, vKospi)) - logMin) / logSpan) * 225;
-          yRf = 260 - ((Math.log(Math.max(0.1, vRf)) - logMin) / logSpan) * 225;
-        } else {
-          yBas = 260 - ((vBas - minVal) / (maxVal - minVal)) * 225;
-          ySpy = 260 - ((vSpy - minVal) / (maxVal - minVal)) * 225;
-          yKospi = 260 - ((vKospi - minVal) / (maxVal - minVal)) * 225;
-          yRf = 260 - ((vRf - minVal) / (maxVal - minVal)) * 225;
-        }
-
-        yBas = Math.max(25, Math.min(270, yBas));
-        ySpy = Math.max(30, Math.min(270, ySpy));
-        yKospi = Math.max(40, Math.min(270, yKospi));
-        yRf = Math.max(50, Math.min(270, yRf));
+        const yBas = Math.max(20, Math.min(305, mapValueToY(basVals[i])));
+        const ySpy = Math.max(20, Math.min(305, mapValueToY(spyVals[i])));
+        const yKospi = Math.max(20, Math.min(305, mapValueToY(kospiVals[i])));
+        const yRf = Math.max(20, Math.min(305, mapValueToY(rfVals[i])));
 
         basPoints.push({ x, y: yBas });
         spyPoints.push({ x, y: ySpy });
@@ -3066,70 +3105,86 @@ ${errText}
 
         const pMDD = Math.max(-80, Math.min(0, ptsToRender[i].mddPct || 0));
         const sMDD = Math.max(-80, Math.min(0, ptsToRender[i].benchMddPct || 0));
-        mddPoints.push({ x, y: 10 + Math.abs(pMDD) * 1.3 });
-        benchMddPoints.push({ x, y: 10 + Math.abs(sMDD) * 1.3 });
+        mddPoints.push({ x, y: 10 + Math.min(85, Math.abs(pMDD) * 2.125) });
+        benchMddPoints.push({ x, y: 10 + Math.min(95, Math.abs(sMDD) * 2.125) });
       }
       state.activeBasPoints = basPoints;
     } else {
       const cagr = state.lastResult ? state.lastResult.afterTaxCAGR : 18.42;
       const mddVal = state.lastResult ? state.lastResult.mdd : -18.25;
-      const benchCagr = cagr * 0.65;
-      const kospiCagr = cagr * 0.35;
-      const rfCagr = 5.0;
-      let tfYears = (eDateFull.getTime() - sDateFull.getTime()) / (365.25 * 24 * 3600 * 1000);
-      const totalGrowth = Math.pow(1 + cagr / 100, tfYears);
-      const maxLin = Math.max(1.5, totalGrowth * 1.08);
-      const maxLog = Math.log(Math.max(1.8, totalGrowth * 1.15));
+      const tfYears = Math.max(0.1, (eDateFull.getTime() - sDateFull.getTime()) / (365.25 * 24 * 3600 * 1000));
+      maxMultiplier = Math.pow(1 + cagr / 100, tfYears) * 1.05;
+      minMultiplier = 0.90;
+      const logMax = Math.log(maxMultiplier);
+      const logMin = Math.log(minMultiplier);
 
-      const numSteps = 50;
+      const numSteps = 60;
       for (let i = 0; i <= numSteps; i++) {
         const ratio = i / numSteps;
         const x = Math.round(ratio * 1000);
         const t = ratio * tfYears;
 
         let vBas = Math.pow(1 + cagr / 100, t);
-        let vSpy = Math.pow(1 + benchCagr / 100, t);
-        let vKospi = Math.pow(1 + kospiCagr / 100, t);
-        let vRf = Math.pow(1 + rfCagr / 100, t);
+        let vSpy = Math.pow(1 + 0.115, t);
+        let vKospi = Math.pow(1 + 0.055, t);
+        let vRf = Math.pow(1.05, t);
 
-        let dip = 0;
-        if (tf === 'ALL' || tf === '10Y' || tf === '5Y') {
-          const dist = Math.abs(ratio - 0.72);
-          if (dist < 0.12) dip = (1 - dist / 0.12) * (Math.abs(mddVal) / 100);
-        }
-        vBas *= (1 - dip * 0.7);
-        vSpy *= (1 - dip * 1.2);
-
-        let yBas, ySpy, yKospi, yRf;
-        if (scale === 'log') {
-          yBas = 260 - (Math.log(Math.max(1, vBas)) / maxLog) * 225;
-          ySpy = 260 - (Math.log(Math.max(1, vSpy)) / maxLog) * 225;
-          yKospi = 260 - (Math.log(Math.max(1, vKospi)) / maxLog) * 225;
-          yRf = 260 - (Math.log(Math.max(1, vRf)) / maxLog) * 225;
-        } else {
-          yBas = 260 - ((vBas - 1) / (maxLin - 1)) * 225;
-          ySpy = 260 - ((vSpy - 1) / (maxLin - 1)) * 225;
-          yKospi = 260 - ((vKospi - 1) / (maxLin - 1)) * 225;
-          yRf = 260 - ((vRf - 1) / (maxLin - 1)) * 225;
+        if (ratio > 0.65 && ratio < 0.85) {
+          const dip = Math.sin(((ratio - 0.65) / 0.20) * Math.PI) * (Math.abs(mddVal) / 100);
+          vBas *= (1 - dip * 0.7);
+          vSpy *= (1 - dip * 1.15);
         }
 
-        yBas = Math.max(25, Math.min(270, yBas));
-        ySpy = Math.max(30, Math.min(270, ySpy));
-        yKospi = Math.max(40, Math.min(270, yKospi));
-        yRf = Math.max(50, Math.min(270, yRf));
+        const mapVal = (v) => {
+          if (v >= 1.0) {
+            const r = (scale === 'log') ? (Math.log(v) / logMax) : ((v - 1.0) / (maxMultiplier - 1.0));
+            return Y_BASE - Math.min(1.0, r) * H_PROFIT;
+          } else {
+            const r = (scale === 'log') ? (Math.log(v) / logMin) : ((1.0 - v) / (1.0 - minMultiplier));
+            return Y_BASE + Math.min(1.0, r) * H_LOSS;
+          }
+        };
 
-        basPoints.push({ x, y: yBas });
-        spyPoints.push({ x, y: ySpy });
-        kospiPoints.push({ x, y: yKospi });
-        rfPoints.push({ x, y: yRf });
+        basPoints.push({ x, y: Math.max(20, Math.min(305, mapVal(vBas))) });
+        spyPoints.push({ x, y: Math.max(20, Math.min(305, mapVal(vSpy))) });
+        kospiPoints.push({ x, y: Math.max(20, Math.min(305, mapVal(vKospi))) });
+        rfPoints.push({ x, y: Math.max(20, Math.min(305, mapVal(vRf))) });
 
-        const mddY = 10 + Math.min(85, dip * 200);
-        const benchMddY = 10 + Math.min(95, dip * 320);
-        mddPoints.push({ x, y: mddY });
-        benchMddPoints.push({ x, y: benchMddY });
+        const dRatio = (ratio > 0.65 && ratio < 0.85) ? Math.sin(((ratio - 0.65) / 0.20) * Math.PI) : 0;
+        mddPoints.push({ x, y: 10 + dRatio * Math.abs(mddVal) * 2.125 });
+        benchMddPoints.push({ x, y: 10 + dRatio * 35.6 * 2.125 });
       }
       state.activeBasPoints = basPoints;
     }
+
+    // Y축 눈금 라벨 업데이트
+    const yTop = document.getElementById('y-label-top');
+    const yUpper = document.getElementById('y-label-upper');
+    const yMid = document.getElementById('y-label-mid');
+    const yLower = document.getElementById('y-label-lower');
+    const yBase = document.getElementById('y-label-base');
+
+    const fmtW = (w) => {
+      const eok = w / 100000000;
+      if (eok >= 1.0) return `₩${eok.toFixed(1)}억`;
+      const man = Math.round(w / 10000);
+      return `₩${man.toLocaleString()}만`;
+    };
+
+    if (yTop) yTop.textContent = `${fmtW(p0Wealth * maxMultiplier)} (+${Math.round((maxMultiplier - 1) * 100)}%)`;
+    if (yUpper) {
+      const vUp = 1.0 + (maxMultiplier - 1.0) * 0.75;
+      yUpper.textContent = `${fmtW(p0Wealth * vUp)} (+${Math.round((vUp - 1) * 100)}%)`;
+    }
+    if (yMid) {
+      const vM = 1.0 + (maxMultiplier - 1.0) * 0.50;
+      yMid.textContent = `${fmtW(p0Wealth * vM)} (+${Math.round((vM - 1) * 100)}%)`;
+    }
+    if (yLower) {
+      const vLo = 1.0 + (maxMultiplier - 1.0) * 0.25;
+      yLower.textContent = `${fmtW(p0Wealth * vLo)} (+${Math.round((vLo - 1) * 100)}%)`;
+    }
+    if (yBase) yBase.textContent = `${fmtW(p0Wealth)} (원금 0%)`;
 
     const makePathD = (pts) => pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
 
@@ -3147,16 +3202,6 @@ ${errText}
       const lastPt = basPoints[basPoints.length - 1];
       peakDot.setAttribute('cx', lastPt.x);
       peakDot.setAttribute('cy', lastPt.y);
-    }
-    if (midDot1 && basPoints.length > 35) {
-      const pt1 = basPoints[Math.round(basPoints.length * 0.85)];
-      midDot1.setAttribute('cx', pt1.x);
-      midDot1.setAttribute('cy', pt1.y);
-    }
-    if (midDot2 && basPoints.length > 25) {
-      const pt2 = basPoints[Math.round(basPoints.length * 0.5)];
-      midDot2.setAttribute('cx', pt2.x);
-      midDot2.setAttribute('cy', pt2.y);
     }
   }
 
@@ -3961,8 +4006,19 @@ ${errText}
         spyFactor *= 0.78;
       }
 
-      const pVal = curContrib * growthFactor;
-      const sVal = payload.capital * spyFactor;
+      // 연금 미래가치 복리(FV of Annuity)로 적립식 원금의 현실적 복리 반영
+      const rM_bas = Math.pow(1 + rawCAGR / 100, 1/12) - 1;
+      const rM_spy = Math.pow(1 + 0.115, 1/12) - 1;
+      const dcaWealthBas = (payload.dcaEnabled && curMonths > 0 && rM_bas > 0)
+        ? payload.dcaAmount * ((Math.pow(1 + rM_bas, curMonths) - 1) / rM_bas)
+        : (payload.dcaEnabled ? payload.dcaAmount * curMonths : 0);
+      const dcaWealthSpy = (payload.dcaEnabled && curMonths > 0 && rM_spy > 0)
+        ? payload.dcaAmount * ((Math.pow(1 + rM_spy, curMonths) - 1) / rM_spy)
+        : (payload.dcaEnabled ? payload.dcaAmount * curMonths : 0);
+
+      const pVal = payload.capital * growthFactor + dcaWealthBas * (growthFactor / Math.max(0.01, Math.pow(1 + rawCAGR / 100, curYears)));
+      const sVal = payload.capital * spyFactor + dcaWealthSpy * (spyFactor / Math.max(0.01, Math.pow(1 + 0.115, curYears)));
+
       if (pVal > peakWealth) peakWealth = pVal;
       if (sVal > peakSpy) peakSpy = sVal;
 
@@ -3970,12 +4026,13 @@ ${errText}
       const sMDD = Math.min(0, ((sVal - peakSpy) / peakSpy) * 100);
 
       const pRet = ((pVal - curContrib) / curContrib) * 100;
-      const sRet = ((sVal - payload.capital) / payload.capital) * 100;
+      const sRet = ((sVal - curContrib) / curContrib) * 100;
 
       curveData.push({
         date: dtIso,
         timestamp: curDt.getTime(),
         wealth: Math.round(pVal),
+        benchWealth: Math.round(sVal),
         returnPct: parseFloat(pRet.toFixed(2)),
         benchReturnPct: parseFloat(sRet.toFixed(2)),
         mddPct: parseFloat(pMDD.toFixed(2)),

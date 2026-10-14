@@ -477,15 +477,27 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
             # 4.3 실제 시계열 차트 데이터 (일봉 전수 계산: Daily Bars)
             dates = pv_series.index
             spy_close = price_df['SPY'] if 'SPY' in price_df.columns else pv_series
-            spy_rebased = (spy_close / spy_close.iloc[0]) * capital
-            spy_dd = calculate_drawdown(spy_close)
+            
+            # SPY 동일 DCA 투입 시뮬레이션
+            spy_returns = spy_close.pct_change().fillna(0.0)
+            spy_pv = []
+            cur_spy_val = capital
+            last_dca_m = dates[0].month
+            for dt_item, r_spy in zip(dates, spy_returns):
+                cur_spy_val *= (1.0 + float(r_spy))
+                if periodic_cf > 0 and dt_item.month != last_dca_m:
+                    last_dca_m = dt_item.month
+                    cur_spy_val += periodic_cf
+                spy_pv.append(cur_spy_val)
+            spy_pv_series = pd.Series(spy_pv, index=dates)
+            spy_dd = calculate_drawdown(spy_pv_series)
 
             curve_data = []
             len_dates = len(dates)
             for idx in range(len_dates):
                 dt_obj = dates[idx]
                 p_val = float(pv_series.iloc[idx])
-                s_val = float(spy_rebased.iloc[idx])
+                s_val = float(spy_pv_series.iloc[idx])
                 p_dd = float(dd_series.iloc[idx] * 100.0)
                 s_dd = float(spy_dd.iloc[idx] * 100.0)
 
@@ -494,12 +506,13 @@ class BacktestAPIHandler(BaseHTTPRequestHandler):
                 cur_contrib = capital + (total_contributed - capital) * elapsed_ratio
 
                 p_ret = ((p_val / (cur_contrib or 1.0)) - 1.0) * 100.0
-                s_ret = ((s_val / capital) - 1.0) * 100.0
+                s_ret = ((s_val / (cur_contrib or 1.0)) - 1.0) * 100.0
 
                 curve_data.append({
                     "date": dt_obj.strftime("%Y-%m-%d"),
                     "timestamp": int(pd.Timestamp(dt_obj).timestamp() * 1000),
                     "wealth": round(p_val),
+                    "benchWealth": round(s_val),
                     "returnPct": round(p_ret, 2),
                     "benchReturnPct": round(s_ret, 2),
                     "mddPct": round(p_dd, 2),
