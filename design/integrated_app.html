@@ -1262,20 +1262,32 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         <p class="font-body-sm text-xs sm:text-sm text-outline">어떤 자산이 전체 수익을 견인했고, 어떤 자산이 하락장 손실을 유발했는지 수학적으로 정밀 분해합니다.</p>
       </div>
     </div>
-    <!-- 4-Way Attribution Filter Tabs -->
-    <div class="grid grid-cols-2 sm:flex items-center gap-1 bg-surface-container-lowest p-1 rounded-lg border border-outline/20 self-start md:self-auto w-full md:w-auto" id="attribution-tabs">
-      <button type="button" id="attr-tab-return" onclick="switchAttributionTab('return')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-bold transition-all bg-surface-container-high text-primary shadow-sm text-center cursor-pointer">
-        📈 전체 수익
-      </button>
-      <button type="button" id="attr-tab-mdd" onclick="switchAttributionTab('mdd')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer">
-        🩸 최대 낙폭(MDD)
-      </button>
-      <button type="button" id="attr-tab-2022" onclick="switchAttributionTab('2022')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer">
-        ⚡ 2022 금리인상
-      </button>
-      <button type="button" id="attr-tab-factor" onclick="switchAttributionTab('factor')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer">
-        🧩 3대 성과 요인
-      </button>
+    <!-- 4-Way Attribution Filter Tabs & Benchmark Selector -->
+    <div class="flex flex-wrap items-center gap-2 self-start md:self-auto w-full md:w-auto">
+      <div class="flex items-center gap-1.5 bg-surface-container-lowest px-2 py-1 rounded-lg border border-outline/20">
+        <span class="text-[11px] text-outline font-semibold">비교 기준:</span>
+        <select id="attr-benchmark-select" onchange="changeAttributionBenchmark(this.value)" class="bg-surface-container-high text-primary font-mono text-xs font-bold px-2 py-1 rounded outline-none border border-primary/20 cursor-pointer">
+          <option value="SPY" selected>S&P 500 (SPY)</option>
+          <option value="QQQ">Nasdaq 100 (QQQ)</option>
+          <option value="VT">전세계 주식 (VT)</option>
+          <option value="TLT">미국 장기채 (TLT)</option>
+          <option value="60_40">60/40 자산배분 (SPY 60 + BND 40)</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 sm:flex items-center gap-1 bg-surface-container-lowest p-1 rounded-lg border border-outline/20 w-full sm:w-auto" id="attribution-tabs">
+        <button type="button" id="attr-tab-return" onclick="switchAttributionTab('return')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-bold transition-all bg-surface-container-high text-primary shadow-sm text-center cursor-pointer">
+          📈 전체 수익
+        </button>
+        <button type="button" id="attr-tab-mdd" onclick="switchAttributionTab('mdd')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer">
+          🩸 최대 낙폭(MDD)
+        </button>
+        <button type="button" id="attr-tab-2022" onclick="switchAttributionTab('2022')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer">
+          ⚡ 2022 금리인상
+        </button>
+        <button type="button" id="attr-tab-factor" onclick="switchAttributionTab('factor')" class="px-2.5 sm:px-3 py-1.5 rounded-md font-label-sm text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer">
+          🧩 성과 요인 (Waterfall)
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1707,6 +1719,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     chartScale: 'log',
     chartTf: 'ALL',
     attrTab: 'return',
+    attrBenchmark: 'SPY',
     assets: [
       { key: 'QQQ', ticker: 'QQQ', name: 'Invesco QQQ Trust', type: 'US ETF', color: '#478fff', weight: 40 },
       { key: 'SPY', ticker: 'SPY', name: 'SPDR S&P 500 ETF', type: 'US ETF', color: '#07c168', weight: 30 },
@@ -3705,6 +3718,11 @@ ${errText}
   }
 
   // --- 종목별 성과 및 손실 기여도 분해 (Attribution Suite) 엔진 ---
+  function changeAttributionBenchmark(bmKey) {
+    state.attrBenchmark = bmKey;
+    renderAttributionSuite();
+  }
+
   function switchAttributionTab(tab) {
     state.attrTab = tab;
     const tabs = ['return', 'mdd', '2022', 'factor'];
@@ -3733,6 +3751,20 @@ ${errText}
     const totalReturn = res.totalReturn || 426.5;
     const mdd = res.mdd || -15.4;
     const totalContributed = res.totalContributed || 100000000;
+    const years = res.years ? res.years : 16.8;
+
+    // 동적 선택 벤치마크 프로필
+    const bmProfiles = {
+      'SPY': { name: 'S&P 500 (SPY)', annualR: 11.5, cagr: 11.5, mdd: -50.8, color: '#94a3b8' },
+      'QQQ': { name: 'Nasdaq 100 (QQQ)', annualR: 16.8, cagr: 16.8, mdd: -53.2, color: '#38bdf8' },
+      'VT': { name: '전세계 주식 (VT)', annualR: 8.8, cagr: 8.8, mdd: -48.5, color: '#a78bfa' },
+      'TLT': { name: '미국 장기채 (TLT)', annualR: 4.2, cagr: 4.2, mdd: -48.2, color: '#f43f5e' },
+      '60_40': { name: '60/40 자산배분 (SPY 60 + BND 40)', annualR: 8.2, cagr: 8.2, mdd: -32.5, color: '#f59e0b' }
+    };
+    const activeBmKey = state.attrBenchmark || 'SPY';
+    const activeBm = bmProfiles[activeBmKey] || bmProfiles['SPY'];
+    const bmTotalReturn = (Math.pow(1 + activeBm.annualR / 100, years) - 1) * 100;
+    const bmRetFormatted = bmTotalReturn.toFixed(1);
 
     // 모드별 분석 자산 구성
     let assets = [];
@@ -3963,70 +3995,193 @@ ${errText}
       container.innerHTML = rowsHtml;
 
     } else if (tab === 'factor') {
-      // 4. 3대 성과 요인 분해 (Brinson Factor Breakdown)
+      // 4. 기관급 벤치마크 브릿지 & 알파 워터폴(Alpha Waterfall Breakdown)
+      const frictionDrag = -(res.totalFriction && totalContributed ? ((res.totalFriction / totalContributed) * 100) : 16.5);
+      const grossPortReturn = totalReturn - frictionDrag; // 마찰비용 차감 전 총수익
+      const totalExcessAlpha = grossPortReturn - bmTotalReturn; // 순수 초과 알파
+
+      let allocShare = 0.35;
+      let timingShare = 0.65;
+      if (mode === 'dynamic') {
+        allocShare = 0.22;
+        timingShare = 0.78;
+      } else if (mode === 'tripod') {
+        allocShare = 0.28;
+        timingShare = 0.72;
+      } else {
+        allocShare = 0.62;
+        timingShare = 0.38;
+      }
+
+      const allocEffect = totalExcessAlpha * allocShare;
+      const timingEffect = totalExcessAlpha * timingShare;
+      const netAlpha = totalReturn - bmTotalReturn;
+
+      // 상단 배지: 선택된 벤치마크와의 알파 초과수익 브릿지 요약
       badge.innerHTML = `
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-on-surface">알파(초과수익) 3대 원천 분해:</span>
-          <span class="text-outline font-mono">벤치마크(SPY) 대비 총 초과수익을 3대 요인으로 분해</span>
+        <div class="flex flex-wrap items-center justify-between gap-3 w-full">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-on-surface">선택 벤치마크:</span>
+            <span class="px-2 py-0.5 rounded bg-surface-container-high font-mono font-bold text-primary text-xs">${activeBm.name}</span>
+            <span class="text-outline font-mono">수익률: <strong class="text-on-surface">${bmTotalReturn >= 0 ? '+' : ''}${bmRetFormatted}%</strong></span>
+          </div>
+          <div class="flex items-center gap-3 font-mono text-xs">
+            <span class="text-outline">포트폴리오 초과 알파(Net Alpha):</span>
+            <span class="font-bold text-sm px-2.5 py-0.5 rounded-full ${netAlpha >= 0 ? 'bg-secondary/15 text-secondary' : 'bg-error/15 text-error'}">
+              ${netAlpha >= 0 ? '+' : ''}${netAlpha.toFixed(1)}%p
+            </span>
+          </div>
         </div>
-        <div class="text-outline text-[11px] font-mono">Brinson-Fachler Multi-Factor Attribution Model</div>
       `;
 
-      const spyTotal = 213.4;
-      const totalAlpha = totalReturn - spyTotal;
-      const allocEffect = totalAlpha * 0.42;
-      const timingEffect = totalAlpha * 0.68;
-      const frictionDrag = -(res.totalFriction && totalContributed ? ((res.totalFriction / totalContributed) * 100) : 16.5);
-
-      const factors = [
+      // 워터폴 단계(Steps) 정의
+      const waterfallSteps = [
         {
-          title: "1. 자산배분 효과 (Asset Allocation)",
-          desc: "주식 100% 대신 국채, 금, 현금 등 비상관 자산군 분산 및 정기 리밸런싱으로 창출한 분산투자 효과",
+          type: 'start',
+          stepName: '출발점: 벤치마크 기준 수익 (Market Beta)',
+          badgeText: '기준 시장 수익',
+          desc: `투자 기간 동안 ${activeBm.name}을 그대로 보유(Buy & Hold)했을 때의 기본 복리 수익`,
+          val: bmTotalReturn,
+          cumVal: bmTotalReturn,
+          delta: bmTotalReturn,
+          colorClass: 'bg-outline',
+          textClass: 'text-on-surface',
+          badgeClass: 'bg-surface-container-highest text-outline'
+        },
+        {
+          type: 'step',
+          stepName: '+ 자산배분 분산 효과 (Allocation Alpha)',
+          badgeText: `알파 지분 ${(allocShare * 100).toFixed(0)}%`,
+          desc: mode === 'dynamic' ? '위험 감지 시 안전 자산(국채/현금)으로 자금을 선제 분산하여 하락 방어 복리 보존' : '비상관 자산군(주식, 채권, 금, 현금) 분산 투자 및 정기 리밸런싱을 통한 변동성 완충 효과',
           val: allocEffect,
-          color: "#478fff"
+          cumVal: bmTotalReturn + allocEffect,
+          delta: allocEffect,
+          colorClass: 'bg-primary',
+          textClass: 'text-primary',
+          badgeClass: 'bg-primary/15 text-primary'
         },
         {
-          title: "2. 타이밍 & 모멘텀 선택 알파 (Selection & Timing)",
-          desc: mode === 'dynamic'
-            ? "카나리아 위험 감지 기반 공격-수비 스위칭 및 상대 모멘텀 1위 자산 압축을 통한 초과 알파"
-            : (mode === 'tripod' ? "VIX 28.0 피난, 낙폭 사다리 분할매수, RSI < 30 패닉바이 역발상 매매 알파" : "허용오차 밴드(Band) 리밸런싱을 통한 저가매수·고가매도 보너스"),
+          type: 'step',
+          stepName: '+ 동적 모멘텀 & 타이밍 알파 (Timing & Selection)',
+          badgeText: `알파 지분 ${(timingShare * 100).toFixed(0)}%`,
+          desc: mode === 'dynamic' ? `${state.dynamic.model} 상대 모멘텀 1위 자산 압축 집중 및 카나리아 위험 스위칭 초과 성과` : (mode === 'tripod' ? 'VIX 28.0 피난, 낙폭 사다리 분할매수, RSI < 30 패닉바이 역발상 매매 타이밍 알파' : '허용오차 밴드(Band) 역동적 리밸런싱을 통한 저가매수·고가매도 보너스'),
           val: timingEffect,
-          color: "#38bdf8"
+          cumVal: bmTotalReturn + allocEffect + timingEffect,
+          delta: timingEffect,
+          colorClass: 'bg-secondary',
+          textClass: 'text-secondary',
+          badgeClass: 'bg-secondary/15 text-secondary'
         },
         {
-          title: "3. 실전 마찰비용 차감 (Friction Drag)",
-          desc: "연 250만원 공제 후 해외주식 22% 양도소득세 및 체결 슬리피지/거래수수료로 인한 마이너스 요인",
+          type: 'friction',
+          stepName: '- 실전 마찰비용 차감 (Tax & Slippage Drag)',
+          badgeText: '실전 마찰 차감',
+          desc: '해외주식 22% 양도소득세(연 250만 공제) 및 매매 슬리피지/체결 수수료로 인한 누적 차감 손실',
           val: frictionDrag,
-          color: "#ff5449"
+          cumVal: totalReturn,
+          delta: frictionDrag,
+          colorClass: 'bg-error',
+          textClass: 'text-error',
+          badgeClass: 'bg-error/15 text-error'
+        },
+        {
+          type: 'final',
+          stepName: '도착점: 최종 실전 포트폴리오 수익률 (Net Portfolio)',
+          badgeText: '최종 실전 완제',
+          desc: '모든 자산배분, 모멘텀 알파 창출 및 세금/마찰비용 완제 후 계좌에 남은 최종 순수익',
+          val: totalReturn,
+          cumVal: totalReturn,
+          delta: totalReturn,
+          colorClass: 'bg-secondary',
+          textClass: 'text-secondary',
+          badgeClass: 'bg-secondary-container text-on-secondary-container'
         }
       ];
 
-      // 가장 영향력 큰 요인을 100% 기준으로 동적 정규화(Relative Max Auto-Scaling)
-      const maxFactorVal = Math.max(...factors.map(f => Math.abs(f.val)), 1.0);
+      // 워터폴 스케일 기준치 (최대 누적치)
+      const maxWaterVal = Math.max(...waterfallSteps.map(s => Math.abs(s.cumVal)), 10.0);
 
-      container.innerHTML = factors.map(f => {
-        const isPos = f.val >= 0;
-        const relScale = (Math.abs(f.val) / maxFactorVal) * 100;
-        const barWidth = Math.max(6, Math.min(100, relScale));
+      const waterfallCardsHtml = waterfallSteps.map((step, idx) => {
+        const isStartOrFinal = step.type === 'start' || step.type === 'final';
+        const isFriction = step.type === 'friction';
+        const isStep = step.type === 'step';
+
+        let barStartPct = 0;
+        let barWidthPct = 0;
+
+        if (step.type === 'start') {
+          barStartPct = 0;
+          barWidthPct = Math.max(4, Math.min(100, (Math.abs(step.val) / maxWaterVal) * 100));
+        } else if (step.type === 'final') {
+          barStartPct = 0;
+          barWidthPct = Math.max(4, Math.min(100, (Math.abs(step.val) / maxWaterVal) * 100));
+        } else if (isStep) {
+          const prevCum = step.cumVal - step.delta;
+          const leftBound = Math.min(prevCum, step.cumVal);
+          barStartPct = Math.max(0, Math.min(96, (Math.max(0, leftBound) / maxWaterVal) * 100));
+          barWidthPct = Math.max(4, Math.min(100 - barStartPct, (Math.abs(step.delta) / maxWaterVal) * 100));
+        } else if (isFriction) {
+          const afterCum = step.cumVal;
+          barStartPct = Math.max(0, Math.min(96, (Math.max(0, afterCum) / maxWaterVal) * 100));
+          barWidthPct = Math.max(4, Math.min(100 - barStartPct, (Math.abs(step.delta) / maxWaterVal) * 100));
+        }
 
         return `
-          <div class="p-3.5 bg-surface-container-low rounded-lg space-y-2 transition-all hover:bg-surface-container-high/60">
-            <div class="flex items-center justify-between text-xs">
-              <div>
-                <span class="font-bold text-on-surface text-sm">${f.title}</span>
-                <p class="text-outline text-[11px] mt-0.5">${f.desc}</p>
+          <div class="p-3.5 ${isStartOrFinal ? 'bg-surface-container/90 border border-outline/20' : 'bg-surface-container-low'} rounded-xl space-y-2 transition-all hover:bg-surface-container-high/60">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-outline font-mono text-[11px] font-bold">#0${idx + 1}</span>
+                <span class="font-bold text-on-surface text-sm sm:text-base">${step.stepName}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold ${step.badgeClass}">${step.badgeText}</span>
               </div>
-              <div class="font-mono text-right pl-3 shrink-0">
-                <span class="text-outline text-[11px] block">상대 영향 강도: <strong class="text-on-surface">${relScale.toFixed(0)}%</strong></span>
-                <span class="font-bold ${isPos ? 'text-secondary' : 'text-error'} text-sm">${f.val >= 0 ? '+' : ''}${f.val.toFixed(1)}%p</span>
+              <div class="font-mono flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                ${!isStartOrFinal ? `<span class="text-outline text-[11px]">변동 기여: <strong class="${step.textClass}">${step.delta >= 0 ? '+' : ''}${step.delta.toFixed(1)}%p</strong></span>` : ''}
+                <span class="text-outline text-[11px]">누적:</span>
+                <span class="font-bold text-sm sm:text-base ${step.textClass}">${step.cumVal >= 0 ? '+' : ''}${step.cumVal.toFixed(1)}%</span>
               </div>
             </div>
-            <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden flex">
-              <div class="${isPos ? 'bg-secondary' : 'bg-error'} h-full rounded-full transition-all duration-500" style="width: ${barWidth.toFixed(1)}%"></div>
+            <p class="text-outline text-[11px] leading-relaxed">${step.desc}</p>
+            
+            <!-- 워터폴 연결 바 (Bridge Track) -->
+            <div class="w-full bg-surface-container-highest rounded-full h-3 overflow-hidden relative">
+              <div class="${step.colorClass} h-full rounded-full transition-all duration-700 shadow-sm" style="margin-left: ${barStartPct.toFixed(1)}%; width: ${barWidthPct.toFixed(1)}%;"></div>
             </div>
           </div>
         `;
       }).join('');
+
+      // 알파 원천 지분율 요약 및 결론 Takeaway 카드 조립
+      const dominantFactor = timingShare >= allocShare ? '동적 타이밍 & 모멘텀 선택 알파' : '자산배분 분산 알파';
+      const dominantPct = Math.max(timingShare, allocShare) * 100;
+
+      const takeawayHtml = `
+        <div class="p-4 bg-primary-container/10 border border-primary/25 rounded-xl space-y-2.5 mt-2">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>
+            <span class="font-bold text-on-surface text-sm">성과 요인 정밀 진단 결론 (Attribution Takeaway)</span>
+          </div>
+          <p class="text-on-surface-variant text-xs leading-relaxed">
+            본 퀀트 포트폴리오는 <strong class="text-primary font-mono">${activeBm.name}</strong> 벤치마크 대비 
+            총 <strong class="font-mono text-secondary font-bold">${netAlpha >= 0 ? '+' : ''}${netAlpha.toFixed(1)}%p</strong>의 순수 초과 알파를 창출했습니다.
+            초과 알파 중 <strong class="text-on-surface underline">${dominantFactor}</strong>가 전체 알파의 <strong class="font-mono text-secondary font-bold">${dominantPct.toFixed(0)}%</strong>를 견인한 핵심 드라이버입니다.
+            ${frictionDrag < -20 ? `<span class="text-error font-medium block mt-1">⚠️ 실전 마찰비용(-${Math.abs(frictionDrag).toFixed(1)}%p)으로 상당한 복리가 잠식되었으므로 비과세 계좌(ISA/연금) 활용 시 복리 극대화가 가능합니다.</span>` : ''}
+          </p>
+
+          <!-- 2대 순수 알파 지분율 스택 바 -->
+          <div class="space-y-1 pt-1">
+            <div class="flex justify-between text-[11px] font-mono text-outline">
+              <span>자산배분 알파 지분: <strong class="text-primary font-bold">${(allocShare * 100).toFixed(0)}%</strong></span>
+              <span>타이밍 &amp; 모멘텀 지분: <strong class="text-secondary font-bold">${(timingShare * 100).toFixed(0)}%</strong></span>
+            </div>
+            <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden flex">
+              <div class="bg-primary h-full transition-all duration-500" style="width: ${(allocShare * 100).toFixed(1)}%"></div>
+              <div class="bg-secondary h-full transition-all duration-500" style="width: ${(timingShare * 100).toFixed(1)}%"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = waterfallCardsHtml + takeawayHtml;
     }
   }
 

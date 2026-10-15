@@ -46,11 +46,17 @@ def verify_attribution_suite():
         attr_sec.screenshot(path=str(ARTIFACT_DIR / "attr_tab_2022.png"))
         print("[SCREENSHOT] Saved attr_tab_2022.png")
 
-        # Tab 4: 3대 성과 요인(Brinson) 분해 캡처
+        # Tab 4: 벤치마크 브릿지 & 알파 워터폴 캡처 (기본 SPY)
         page.click("#attr-tab-factor")
-        page.wait_for_timeout(300)
-        attr_sec.screenshot(path=str(ARTIFACT_DIR / "attr_tab_factor.png"))
-        print("[SCREENSHOT] Saved attr_tab_factor.png")
+        page.wait_for_timeout(400)
+        attr_sec.screenshot(path=str(ARTIFACT_DIR / "attr_tab_factor_spy.png"))
+        print("[SCREENSHOT] Saved attr_tab_factor_spy.png")
+
+        # 벤치마크를 QQQ(나스닥 100)로 변경 후 다시 캡처
+        page.select_option("#attr-benchmark-select", "QQQ")
+        page.wait_for_timeout(400)
+        attr_sec.screenshot(path=str(ARTIFACT_DIR / "attr_tab_factor_qqq.png"))
+        print("[SCREENSHOT] Saved attr_tab_factor_qqq.png")
 
         # 모바일 환경에서도 확인
         mobile_page = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
