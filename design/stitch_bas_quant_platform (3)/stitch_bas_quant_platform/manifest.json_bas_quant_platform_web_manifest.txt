@@ -1,0 +1,35 @@
+{
+  "name": "블암스 ETF 퀀트 백테스팅 | BAS Quant Platform",
+  "short_name": "BAS Quant",
+  "description": "한국 & 미국 상장 ETF 기반 퀀트 투자 분석, 나스닥 레버리지 트라이포드(Tripod) 전략 및 기관급 위험조정 성과 시뮬레이션 웹 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e18",
+  "theme_color": "#3182f6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "categories": [
+    "finance",
+    "productivity",
+    "utilities"
+  ],
+  "lang": "ko-KR"
+}

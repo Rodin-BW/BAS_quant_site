@@ -3790,11 +3790,16 @@ ${errText}
       });
 
       const totalScore = rawContribs.reduce((sum, item) => sum + item.score, 0) || 1.0;
-
-      let rowsHtml = rawContribs.map(item => {
+      const computedContribs = rawContribs.map(item => {
         const itemContrib = (item.score / totalScore) * targetGrossReturn;
         const itemShare = (itemContrib / targetGrossReturn) * 100;
-        const barWidth = Math.min(100, Math.max(3, itemShare));
+        return { ...item, itemContrib, itemShare };
+      });
+
+      const maxReturnVal = Math.max(...computedContribs.map(x => x.itemContrib), frictionPct, 1.0);
+
+      let rowsHtml = computedContribs.map(item => {
+        const relBarWidth = Math.max(5, Math.min(100, (item.itemContrib / maxReturnVal) * 100));
 
         return `
           <div class="p-3 bg-surface-container-low rounded-lg space-y-1.5 transition-all hover:bg-surface-container-high/60">
@@ -3806,17 +3811,18 @@ ${errText}
                 <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-highest text-outline font-mono">비중 ${item.weight.toFixed(0)}%</span>
               </div>
               <div class="flex items-center gap-3 font-mono">
-                <span class="text-outline text-[11px]">수익 지분: <strong>${itemShare.toFixed(1)}%</strong></span>
-                <span class="font-bold text-secondary text-sm">+${itemContrib.toFixed(1)}%p</span>
+                <span class="text-outline text-[11px]">수익 점유율: <strong>${item.itemShare.toFixed(1)}%</strong></span>
+                <span class="font-bold text-secondary text-sm">+${item.itemContrib.toFixed(1)}%p</span>
               </div>
             </div>
-            <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden flex">
-              <div class="bg-secondary h-full rounded-full transition-all duration-500" style="width: ${barWidth.toFixed(1)}%"></div>
+            <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden flex">
+              <div class="bg-secondary h-full rounded-full transition-all duration-500" style="width: ${relBarWidth.toFixed(1)}%"></div>
             </div>
           </div>
         `;
       }).join('');
 
+      const frictionRelWidth = Math.max(5, Math.min(100, (frictionPct / maxReturnVal) * 100));
       rowsHtml += `
         <div class="p-3 bg-surface-container-low/80 rounded-lg space-y-1.5 border border-error/15">
           <div class="flex items-center justify-between text-xs">
@@ -3830,8 +3836,8 @@ ${errText}
               <span class="font-bold text-error text-sm">-${frictionPct.toFixed(1)}%p</span>
             </div>
           </div>
-          <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden flex">
-            <div class="bg-error h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, (frictionPct / targetGrossReturn) * 100).toFixed(1)}%"></div>
+          <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden flex">
+            <div class="bg-error h-full rounded-full transition-all duration-500" style="width: ${frictionRelWidth.toFixed(1)}%"></div>
           </div>
         </div>
       `;
@@ -3866,15 +3872,20 @@ ${errText}
       });
 
       const posLossTotal = lossScores.filter(x => x.rawLoss > 0).reduce((s, x) => s + x.rawLoss, 0) || 1.0;
-
-      const rowsHtml = lossScores.map(item => {
+      const computedLosses = lossScores.map(item => {
         const isLoss = item.rawLoss >= 0;
         const lossVal = isLoss
           ? (item.rawLoss / posLossTotal) * totalMddAbs * (totalMddAbs / (totalMddAbs + 1.2))
           : -0.8 * (item.weight / 30);
         const lossPct = Math.abs(lossVal);
         const lossShare = isLoss ? ((lossPct / totalMddAbs) * 100) : 0;
-        const barWidth = Math.min(100, Math.max(3, lossShare));
+        return { ...item, isLoss, lossVal, lossPct, lossShare };
+      });
+
+      const maxLossVal = Math.max(...computedLosses.map(x => x.lossPct), 1.0);
+
+      const rowsHtml = computedLosses.map(item => {
+        const relBarWidth = Math.max(5, Math.min(100, (item.lossPct / maxLossVal) * 100));
 
         return `
           <div class="p-3 bg-surface-container-low rounded-lg space-y-1.5 transition-all hover:bg-surface-container-high/60">
@@ -3886,12 +3897,12 @@ ${errText}
                 <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-highest text-outline font-mono">비중 ${item.weight.toFixed(0)}%</span>
               </div>
               <div class="flex items-center gap-3 font-mono">
-                <span class="text-outline text-[11px]">${isLoss ? `손실 지분: <strong>${lossShare.toFixed(1)}%</strong>` : '<strong class="text-secondary">완충 방어</strong>'}</span>
-                <span class="font-bold ${isLoss ? 'text-error' : 'text-secondary'} text-sm">${isLoss ? '-' : '+'}${lossPct.toFixed(1)}%p</span>
+                <span class="text-outline text-[11px]">${item.isLoss ? `손실 유발 지분: <strong>${item.lossShare.toFixed(1)}%</strong>` : '<strong class="text-secondary">완충 방어 효과</strong>'}</span>
+                <span class="font-bold ${item.isLoss ? 'text-error' : 'text-secondary'} text-sm">${item.isLoss ? '-' : '+'}${item.lossPct.toFixed(1)}%p</span>
               </div>
             </div>
-            <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden flex">
-              <div class="${isLoss ? 'bg-error' : 'bg-secondary'} h-full rounded-full transition-all duration-500" style="width: ${barWidth.toFixed(1)}%"></div>
+            <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden flex">
+              <div class="${item.isLoss ? 'bg-error' : 'bg-secondary'} h-full rounded-full transition-all duration-500" style="width: ${relBarWidth.toFixed(1)}%"></div>
             </div>
           </div>
         `;
@@ -3915,11 +3926,18 @@ ${errText}
         'GLD': -0.8, 'CASH': +1.8, 'BIL': +1.5, 'SGOV': +1.6, 'SHY': -4.1
       };
 
-      const rowsHtml = assets.map(item => {
+      const computed2022 = assets.map(item => {
         const asset2022Ret = ret2022[item.ticker] || (item.ticker.includes('공격') ? -28.0 : (item.ticker.includes('수비') ? +1.5 : -15.0));
         const weightedImpact = (item.weight / 100.0) * asset2022Ret;
         const isNeg = weightedImpact < 0;
         const absImpact = Math.abs(weightedImpact);
+        return { ...item, asset2022Ret, weightedImpact, isNeg, absImpact };
+      });
+
+      const max2022Impact = Math.max(...computed2022.map(x => x.absImpact), 1.0);
+
+      const rowsHtml = computed2022.map(item => {
+        const relBarWidth = Math.max(5, Math.min(100, (item.absImpact / max2022Impact) * 100));
 
         return `
           <div class="p-3 bg-surface-container-low rounded-lg space-y-1.5 transition-all hover:bg-surface-container-high/60">
@@ -3928,15 +3946,15 @@ ${errText}
                 <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${item.color}"></span>
                 <span class="font-bold text-on-surface font-mono">${item.ticker}</span>
                 <span class="text-outline text-[11px]">${item.name}</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-highest text-outline font-mono">2022 수익률 ${asset2022Ret >= 0 ? '+' : ''}${asset2022Ret.toFixed(1)}%</span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-highest text-outline font-mono">2022 수익률 ${item.asset2022Ret >= 0 ? '+' : ''}${item.asset2022Ret.toFixed(1)}%</span>
               </div>
               <div class="flex items-center gap-3 font-mono">
                 <span class="text-outline text-[11px]">포트폴리오 영향</span>
-                <span class="font-bold ${isNeg ? 'text-error' : 'text-secondary'} text-sm">${weightedImpact >= 0 ? '+' : ''}${weightedImpact.toFixed(1)}%p</span>
+                <span class="font-bold ${item.isNeg ? 'text-error' : 'text-secondary'} text-sm">${item.weightedImpact >= 0 ? '+' : ''}${item.weightedImpact.toFixed(1)}%p</span>
               </div>
             </div>
-            <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden flex">
-              <div class="${isNeg ? 'bg-error' : 'bg-secondary'} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, absImpact * 5).toFixed(1)}%"></div>
+            <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden flex">
+              <div class="${item.isNeg ? 'bg-error' : 'bg-secondary'} h-full rounded-full transition-all duration-500" style="width: ${relBarWidth.toFixed(1)}%"></div>
             </div>
           </div>
         `;
@@ -3983,22 +4001,28 @@ ${errText}
         }
       ];
 
+      // 가장 영향력 큰 요인을 100% 기준으로 동적 정규화(Relative Max Auto-Scaling)
+      const maxFactorVal = Math.max(...factors.map(f => Math.abs(f.val)), 1.0);
+
       container.innerHTML = factors.map(f => {
         const isPos = f.val >= 0;
+        const relScale = (Math.abs(f.val) / maxFactorVal) * 100;
+        const barWidth = Math.max(6, Math.min(100, relScale));
+
         return `
-          <div class="p-3.5 bg-surface-container-low rounded-lg space-y-1.5 transition-all hover:bg-surface-container-high/60">
+          <div class="p-3.5 bg-surface-container-low rounded-lg space-y-2 transition-all hover:bg-surface-container-high/60">
             <div class="flex items-center justify-between text-xs">
               <div>
                 <span class="font-bold text-on-surface text-sm">${f.title}</span>
                 <p class="text-outline text-[11px] mt-0.5">${f.desc}</p>
               </div>
               <div class="font-mono text-right pl-3 shrink-0">
-                <span class="text-outline text-[11px] block">초과수익 기여</span>
+                <span class="text-outline text-[11px] block">상대 영향 강도: <strong class="text-on-surface">${relScale.toFixed(0)}%</strong></span>
                 <span class="font-bold ${isPos ? 'text-secondary' : 'text-error'} text-sm">${f.val >= 0 ? '+' : ''}${f.val.toFixed(1)}%p</span>
               </div>
             </div>
-            <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden flex">
-              <div class="${isPos ? 'bg-secondary' : 'bg-error'} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.abs(f.val) * 1.5).toFixed(1)}%"></div>
+            <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden flex">
+              <div class="${isPos ? 'bg-secondary' : 'bg-error'} h-full rounded-full transition-all duration-500" style="width: ${barWidth.toFixed(1)}%"></div>
             </div>
           </div>
         `;
