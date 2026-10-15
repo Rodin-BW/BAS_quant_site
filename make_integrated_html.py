@@ -49,13 +49,23 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         header_content
     )
 
-    # 4.2 네비게이션 버튼들을 switchNav 인터랙션으로 교체
+    # 4.2 네비게이션 버튼들을 switchNav 인터랙션으로 교체 (데스크탑 + 모바일 퀵 네비게이션 지원)
     nav_replacement = """<nav class="hidden lg:flex items-center gap-space-xs" id="gnb-nav">
 <button id="nav-btn-builder" onclick="switchNav('builder')" class="px-space-md py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-lg shadow-[0_0_12px_rgba(71,143,255,0.15)]" type="button">전략 빌더</button>
 <button id="nav-btn-analytics" onclick="switchNav('analytics')" class="px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all" type="button">백테스트 리포트</button>
 <button id="nav-btn-presets" onclick="switchNav('builder'); document.getElementById('presets-anchor')?.scrollIntoView({behavior:'smooth'});" class="px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all" type="button">전략 라이브러리</button>
 <button id="nav-btn-glossary" onclick="showGlossaryModal()" class="px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all" type="button">팩터 &amp; 지표 사전</button>
-</nav>"""
+</nav>
+<div class="flex lg:hidden items-center gap-0.5 bg-surface-container-high p-0.5 rounded-lg border border-outline/20 shrink-0" id="mobile-top-nav">
+  <button id="mobile-nav-btn-builder" onclick="switchNav('builder')" class="px-2 py-1 rounded-md bg-primary-container text-on-primary-container font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all whitespace-nowrap" type="button" title="전략 설정 화면으로 이동">
+    <span class="material-symbols-outlined text-[15px]">tune</span>
+    <span>설정</span>
+  </button>
+  <button id="mobile-nav-btn-analytics" onclick="switchNav('analytics')" class="px-2 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-medium text-[11px] flex items-center gap-1 transition-all whitespace-nowrap" type="button" title="백테스트 결과 리포트로 이동">
+    <span class="material-symbols-outlined text-[15px]">analytics</span>
+    <span>리포트</span>
+  </button>
+</div>"""
     header_content = re.sub(r'<nav class="hidden lg:flex items-center gap-space-xs".*?</nav>', nav_replacement, header_content, flags=re.DOTALL)
 
     # 4.3 헤더의 알림, 프로필, 백테스트 실행 버튼 상호작용 바인딩
@@ -1088,7 +1098,35 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   </div>
 </div>
 """
+    # 15.13 리포트 최하단 전략설정 복귀 CTA 카드 추가 (모바일 최적화)
+    bottom_return_builder_card = """
+<!-- Bottom Return to Builder CTA Card (Mobile & Desktop) -->
+<div class="mt-8 mb-16 p-4 sm:p-6 bg-surface-container-low border border-outline/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl" id="bottom-return-builder-card">
+  <div class="text-center sm:text-left">
+    <div class="flex items-center justify-center sm:justify-start gap-2">
+      <span class="material-symbols-outlined text-primary text-[24px]">tune</span>
+      <h4 class="font-headline-sm text-base sm:text-lg font-bold text-on-surface">
+        전략 파라미터나 비중을 수정하시겠습니까?
+      </h4>
+    </div>
+    <p class="font-body-sm text-xs sm:text-sm text-outline mt-1">
+      자산 배분 비중, 팩터 알고리즘, 적립식 금액, 검증 기간을 변경하여 새로운 시뮬레이션을 실행할 수 있습니다.
+    </p>
+  </div>
+  <div class="flex items-center gap-2.5 w-full sm:w-auto">
+    <button type="button" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="px-3.5 py-3 rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-md text-xs sm:text-sm font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0" title="화면 최상단으로 이동">
+      <span class="material-symbols-outlined text-[18px]">vertical_align_top</span>
+      <span>맨 위로</span>
+    </button>
+    <button type="button" id="btn-bottom-return-builder" onclick="switchNav('builder')" class="flex-1 sm:flex-none px-6 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-label-md text-sm sm:text-base font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(71,143,255,0.35)] active:scale-95 cursor-pointer">
+      <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+      <span>전략 설정으로 돌아가기</span>
+    </button>
+  </div>
+</div>
+"""
     b_body += tripod_tune_modal_html
+    r_body += bottom_return_builder_card
     r_body += rebalance_modal_html
 
     # 16. 커스텀 스크립트 작성 (완전한 상호작용 및 yfinance 실시간 연동, 배당수익률 산출, 1/N 배분 완비)
@@ -1193,20 +1231,30 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     const vAnalytics = document.getElementById('view-analytics');
     const bBuilder = document.getElementById('nav-btn-builder');
     const bAnalytics = document.getElementById('nav-btn-analytics');
+    const mBuilder = document.getElementById('mobile-nav-btn-builder');
+    const mAnalytics = document.getElementById('mobile-nav-btn-analytics');
 
     const activeClass = "px-space-md py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-lg shadow-[0_0_12px_rgba(71,143,255,0.15)]";
     const inactiveClass = "px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all";
 
+    const mActiveClass = "px-2.5 py-1 rounded-md bg-primary-container text-on-primary-container font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all";
+    const mInactiveClass = "px-2 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-medium text-[11px] flex items-center gap-1 transition-all";
+
     if (tab === 'builder') {
       vBuilder.classList.remove('hidden');
       vAnalytics.classList.add('hidden');
-      bBuilder.className = activeClass;
-      bAnalytics.className = inactiveClass;
+      if (bBuilder) bBuilder.className = activeClass;
+      if (bAnalytics) bAnalytics.className = inactiveClass;
+      if (mBuilder) mBuilder.className = mActiveClass;
+      if (mAnalytics) mAnalytics.className = mInactiveClass;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       vBuilder.classList.add('hidden');
       vAnalytics.classList.remove('hidden');
-      bBuilder.className = inactiveClass;
-      bAnalytics.className = activeClass;
+      if (bBuilder) bBuilder.className = inactiveClass;
+      if (bAnalytics) bAnalytics.className = activeClass;
+      if (mBuilder) mBuilder.className = mInactiveClass;
+      if (mAnalytics) mAnalytics.className = mActiveClass;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
