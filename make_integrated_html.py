@@ -50,11 +50,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     )
 
     # 4.2 네비게이션 버튼들을 switchNav 인터랙션으로 교체 (데스크탑 + 모바일 퀵 네비게이션 지원)
-    nav_replacement = """<nav class="hidden lg:flex items-center gap-space-xs" id="gnb-nav">
-<button id="nav-btn-builder" onclick="switchNav('builder')" class="px-space-md py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-lg shadow-[0_0_12px_rgba(71,143,255,0.15)]" type="button">전략 빌더</button>
-<button id="nav-btn-analytics" onclick="switchNav('analytics')" class="px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all" type="button">백테스트 리포트</button>
-<button id="nav-btn-presets" onclick="switchNav('builder'); document.getElementById('presets-anchor')?.scrollIntoView({behavior:'smooth'});" class="px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all" type="button">전략 라이브러리</button>
-<button id="nav-btn-glossary" onclick="showGlossaryModal()" class="px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all" type="button">팩터 &amp; 지표 사전</button>
+    nav_replacement = """<nav class="hidden lg:flex items-center gap-1 xl:gap-space-xs shrink-0" id="gnb-nav">
+<button id="nav-btn-builder" onclick="switchNav('builder')" class="px-2.5 xl:px-space-md py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-lg shadow-[0_0_12px_rgba(71,143,255,0.15)] whitespace-nowrap text-xs xl:text-label-md" type="button">전략 빌더</button>
+<button id="nav-btn-analytics" onclick="switchNav('analytics')" class="px-2.5 xl:px-space-md py-1.5 font-label-md text-xs xl:text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all whitespace-nowrap" type="button">백테스트 리포트</button>
+<button id="nav-btn-presets" onclick="switchNav('builder'); document.getElementById('presets-anchor')?.scrollIntoView({behavior:'smooth'});" class="px-2.5 xl:px-space-md py-1.5 font-label-md text-xs xl:text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all whitespace-nowrap" type="button">전략 라이브러리</button>
+<button id="nav-btn-glossary" onclick="showGlossaryModal()" class="px-2.5 xl:px-space-md py-1.5 font-label-md text-xs xl:text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all whitespace-nowrap" type="button">팩터 &amp; 지표 사전</button>
 </nav>
 <div class="flex lg:hidden items-center gap-0.5 bg-surface-container-high p-0.5 rounded-lg border border-outline/20 shrink-0" id="mobile-top-nav">
   <button id="mobile-nav-btn-builder" onclick="switchNav('builder')" class="px-2 py-1 rounded-md bg-primary-container text-on-primary-container font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all whitespace-nowrap" type="button" title="전략 설정 화면으로 이동">
@@ -67,6 +67,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   </button>
 </div>"""
     header_content = re.sub(r'<nav class="hidden lg:flex items-center gap-space-xs".*?</nav>', nav_replacement, header_content, flags=re.DOTALL)
+
+    # 4.2.1 헤더 좌측 마켓 상태 뱃지 반응형 정리: 2xl 이상에서만 풀 표시하여 1400px 내비게이션 영역 넉넉하게 확보
+    header_content = header_content.replace('hidden xl:flex items-center gap-space-xs', 'hidden 2xl:flex items-center gap-space-xs')
 
     # 4.3 헤더의 알림, 프로필, 백테스트 실행 버튼 상호작용 바인딩
     header_content = re.sub(
@@ -1298,8 +1301,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     const mBuilder = document.getElementById('mobile-nav-btn-builder');
     const mAnalytics = document.getElementById('mobile-nav-btn-analytics');
 
-    const activeClass = "px-space-md py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-lg shadow-[0_0_12px_rgba(71,143,255,0.15)]";
-    const inactiveClass = "px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all";
+    const activeClass = "px-2.5 xl:px-space-md py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-lg shadow-[0_0_12px_rgba(71,143,255,0.15)] whitespace-nowrap text-xs xl:text-label-md";
+    const inactiveClass = "px-2.5 xl:px-space-md py-1.5 font-label-md text-xs xl:text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all whitespace-nowrap";
 
     const mActiveClass = "px-2.5 py-1 rounded-md bg-primary-container text-on-primary-container font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all";
     const mInactiveClass = "px-2 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-medium text-[11px] flex items-center gap-1 transition-all";
